@@ -1,0 +1,38 @@
+#
+# OS specific
+#
+.*
+!.gitignore
+*~
+.directory
+Thumbs.db
+Desktop.ini
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+#
+# C(++)
+#
+*.slo
+*.lo
+*.o
+*.so
+*.lai
+*.la
+*.a
+*.out
+*.bin
+
+#
+# Editor / IDE
+#
+*.cbp
+*.save
+*.depend
+*.layout
+[Bb]in
+[Oo]bj
+[Dd]ebug
+[Rr]elease
