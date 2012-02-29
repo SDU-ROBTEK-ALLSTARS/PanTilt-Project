@@ -1,8 +1,7 @@
-Pan-Tilt System
-===============
+# Pan-Tilt System #
 This is the readme!
 
-## Directory structure
+## Directory structure ##
 Feel free and add/edit this as the project develops
 
     +-./
