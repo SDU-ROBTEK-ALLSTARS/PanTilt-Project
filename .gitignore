@@ -1,5 +1,5 @@
 #
-# OS specific
+# General / OS specific
 #
 .*
 !.gitignore
@@ -11,28 +11,3 @@ Desktop.ini
 ._*
 .Spotlight-V100
 .Trashes
-
-#
-# C(++)
-#
-*.slo
-*.lo
-*.o
-*.so
-*.lai
-*.la
-*.a
-*.out
-*.bin
-
-#
-# Editor / IDE
-#
-*.cbp
-*.save
-*.depend
-*.layout
-[Bb]in
-[Oo]bj
-[Dd]ebug
-[Rr]elease
