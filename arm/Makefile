@@ -13,10 +13,12 @@ LDSCRIPT = lm3s6569.ld
 
 # "Top level" directories
 RTOS_SOURCE_DIR = freertos/Source
+MODULES_DIR = modules
 
 # Directories that the compiler should look for #includes in
 INCLUDE_DIRS =\
 	-I . \
+	-I $(MODULES_DIR) \
 	-I $(RTOS_SOURCE_DIR)/include \
 	-I $(RTOS_SOURCE_DIR)/portable/GCC/ARM_CM3
 
@@ -24,7 +26,8 @@ INCLUDE_DIRS =\
 SOURCE =\
 	startup.c \
 	main.c \
-	debug/debug.c \
+	$(MODULES_DIR)/debug/debug.c \
+	$(MODULES_DIR)/sysctl/sysctl.c \
 	$(RTOS_SOURCE_DIR)/list.c \
 	$(RTOS_SOURCE_DIR)/queue.c \
 	$(RTOS_SOURCE_DIR)/tasks.c \
