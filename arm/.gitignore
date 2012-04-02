@@ -4,8 +4,9 @@
 *.layout
 [Bb]in
 [Oo]bj
-[Dd]ebug
+/[Dd]ebug
 [Rr]elease
+[Bb]uild
 *.pydevproject
 .project
 .metadata
