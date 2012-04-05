@@ -31,6 +31,6 @@ void prvSetupHardware(void)
 {
   sysctl_global_int_disable();
   sysctl_mclk_init();
-
+  spi_init();
   sysctl_global_int_enable();
 }
