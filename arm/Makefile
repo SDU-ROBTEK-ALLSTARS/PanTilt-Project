@@ -78,23 +78,23 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)/obj
 
 $(BUILD_DIR)/$(PROJ_NAME).bin: $(BUILD_DIR)/$(PROJ_NAME).axf
-	@echo '# Creating binary: $@...'
-	$(OBJCOPY) $(BUILD_DIR)/$(PROJ_NAME).axf -O binary $(BUILD_DIR)/$(PROJ_NAME).bin
-	@echo ' '
+	@echo "OBJCOPY\t$^ -> $@"
+	@$(OBJCOPY) $(BUILD_DIR)/$(PROJ_NAME).axf -O binary $(BUILD_DIR)/$(PROJ_NAME).bin
 
 $(BUILD_DIR)/$(PROJ_NAME).axf: $(OBJS)
-	@echo '# Linking to: $@...'
-	$(CC) $(CFLAGS) $(OBJS) $(LIBS) $(LINKER_FLAGS)
-	@echo ' '
+	@echo "LD\t$(^F) -> $@"
+	@$(CC) $(CFLAGS) $(OBJS) $(LIBS) $(LINKER_FLAGS)
 
 $(OBJS): $(BUILD_DIR)/obj/%.o : %.c
-	@echo '# Compiling: $<...'
+	@echo "CC\t$< -> $@"
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-	@echo ' '
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 postbuild:
-	$(SIZE) $(BUILD_DIR)/$(PROJ_NAME).axf
+	@echo "SIZE\t$(BUILD_DIR)/$(PROJ_NAME).axf"
+	@$(SIZE) $(BUILD_DIR)/$(PROJ_NAME).axf
+	@echo "SIZE\t$(BUILD_DIR)/$(PROJ_NAME).bin"
+	@$(SIZE) --target=binary $(BUILD_DIR)/$(PROJ_NAME).bin
 
 cleandebug: clean
 
@@ -105,5 +105,5 @@ clean:
 	@rm -v -R $(BUILD_TOP_DIR)
 
 program:
-	openocd -f "board/ek-lm3s6965.cfg" -c "init" -c "reset init" -c "halt" -c "flash write_image erase $(BUILD_DIR)/$(PROJ_NAME).bin" -c "verify_image $(BUILD_DIR)/$(PROJ_NAME).bin" -c "reset" -c shutdown
+	@openocd -d0 -f "board/ek-lm3s6965.cfg" -c "init" -c "reset init" -c "halt" -c "flash write_image erase $(BUILD_DIR)/$(PROJ_NAME).bin" -c "verify_image $(BUILD_DIR)/$(PROJ_NAME).bin" -c "reset" -c shutdown
 
