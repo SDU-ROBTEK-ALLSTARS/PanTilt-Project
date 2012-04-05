@@ -26,6 +26,7 @@ INCLUDE_DIRS =\
 SOURCE =\
 	startup.c \
 	main.c \
+	$(MODULES_DIR)/comm/spi.c \
 	$(MODULES_DIR)/debug/debug.c \
 	$(MODULES_DIR)/sysctl/sysctl.c \
 	$(RTOS_SOURCE_DIR)/list.c \
@@ -77,14 +78,20 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)/obj
 
 $(BUILD_DIR)/$(PROJ_NAME).bin: $(BUILD_DIR)/$(PROJ_NAME).axf
+	@echo '# Creating binary: $@...'
 	$(OBJCOPY) $(BUILD_DIR)/$(PROJ_NAME).axf -O binary $(BUILD_DIR)/$(PROJ_NAME).bin
+	@echo ' '
 
 $(BUILD_DIR)/$(PROJ_NAME).axf: $(OBJS)
+	@echo '# Linking to: $@...'
 	$(CC) $(CFLAGS) $(OBJS) $(LIBS) $(LINKER_FLAGS)
+	@echo ' '
 
 $(OBJS): $(BUILD_DIR)/obj/%.o : %.c
+	@echo '# Compiling: $<...'
 	@mkdir -p $(@D)
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
+	@echo ' '
 
 postbuild:
 	$(SIZE) $(BUILD_DIR)/$(PROJ_NAME).axf

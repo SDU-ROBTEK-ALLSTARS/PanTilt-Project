@@ -3,23 +3,29 @@
 #include "lm3s6965.h"
 #include "sysctl.h"
 
-void sysctl_enable_global_int()
+/**
+ * Enables interrupts globally
+ */
+void sysctl_global_int_enable()
 {
 	__asm("cpsie i");
 }
 
-void sysctl_disable_global_int()
+/**
+ * Disables interrupts globally
+ */
+void sysctl_global_int_disable()
 {
   // disable interrupts.
   __asm("cpsid i");
 }
 
-
-void sysctl_init_mclk()
+/**
+ * Initializes master clock to 50 MHz
+ */
+void sysctl_mclk_init()
 {
 	int dummy;
-	// Init clock settings according to datasheet
-	// Set Clock speed to 50 Mhz.
 
 	// Step 1
 	// Set BYPASS bit

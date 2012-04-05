@@ -6,8 +6,10 @@
 #include "queue.h"
 #include "semphr.h"
 
-/* Project includes */
+/* Module includes */
 #include "sysctl/sysctl.h"
+#include "comm/spi.h"
+
 
 static void prvSetupHardware(void);
 
@@ -27,7 +29,8 @@ int main(void)
 
 void prvSetupHardware(void)
 {
-  sysctl_disable_global_int();
-  sysctl_init_mclk();
-  sysctl_enable_global_int();
+  sysctl_global_int_disable();
+  sysctl_mclk_init();
+
+  sysctl_global_int_enable();
 }
