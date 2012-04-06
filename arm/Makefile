@@ -14,10 +14,12 @@ LDSCRIPT = lm3s6569.ld
 # "Top level" directories
 RTOS_SOURCE_DIR = freertos/Source
 MODULES_DIR = modules
+EMPCOURSE_DIR = empcourse
 
 # Directories that the compiler should look for #includes in
 INCLUDE_DIRS =\
 	-I . \
+	-I $(EMPCOURSE_DIR) \
 	-I $(MODULES_DIR) \
 	-I $(RTOS_SOURCE_DIR)/include \
 	-I $(RTOS_SOURCE_DIR)/portable/GCC/ARM_CM3
