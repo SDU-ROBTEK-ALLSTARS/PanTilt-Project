@@ -29,6 +29,7 @@ SOURCE =\
 	startup.c \
 	main.c \
 	$(MODULES_DIR)/comm/spi.c \
+	$(MODULES_DIR)/comm/spi_task.c \
 	$(MODULES_DIR)/debug/debug.c \
 	$(MODULES_DIR)/sysctl/sysctl.c \
 	$(RTOS_SOURCE_DIR)/list.c \
@@ -40,6 +41,7 @@ SOURCE =\
 # Compiler flags
 CFLAGS =\
 	-DGCC_ARMCM3 \
+	-std=c99 \
 	-mthumb \
 	-mcpu=cortex-m3 \
 	-Wall \
@@ -56,11 +58,13 @@ LINKER_FLAGS =\
 	-T$(LDSCRIPT) \
 	-Xlinker --gc-sections
 
-#LIBS= $(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libdriver.a $(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libgr.a
-
-OBJS = $(patsubst %.c,$(BUILD_DIR)/obj/%.o,$(SOURCE))
+#LIBS =\
+#	$(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libdriver.a \
+#	$(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libgr.a
 
 BUILD_DIR = $(BUILD_TOP_DIR)
+
+OBJS = $(patsubst %.c,$(BUILD_DIR)/obj/%.o,$(SOURCE))
 
 # Targets
 all: debug

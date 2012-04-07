@@ -1,36 +1,43 @@
 
-
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
 
-/* Module includes */
+/* EMP course standard headers */
+#include "inc/glob_def.h"
+#include "inc/emp_type.h"
+
+/* Driver module includes */
 #include "sysctl/sysctl.h"
 #include "comm/spi.h"
 
+/* Tasks */
+#include "comm/spi_task.h"
 
-static void prvSetupHardware(void);
+static void hardware_setup(void);
 
 int main(void)
 {
-	prvSetupHardware();
+  /* Set up hardware */
+	hardware_setup();
 
 
 	/* Start the scheduler. */
 	vTaskStartScheduler();
 
-  /* Will only get here if there was insufficient memory
-  to create the idle task. */
-	for( ;; );
-	return 0;
+  while(1)
+  {
+    /* Will only get here if there was insufficient
+       memory to create the idle task. */
+  }
 }
 
-void prvSetupHardware(void)
+void hardware_setup(void)
 {
   sysctl_global_int_disable();
   sysctl_mclk_init();
-  spi_init();
+  spi_init_hw();
   sysctl_global_int_enable();
 }
