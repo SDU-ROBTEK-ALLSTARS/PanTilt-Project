@@ -21,11 +21,17 @@ static void hardware_setup(void);
 int main(void)
 {
   /* Set up hardware */
-	hardware_setup();
+  hardware_setup();
 
+  /* Task initialization */
+  BOOLEAN success = spi_gatekeeper_init();
+  while(!success)
+  {
+    /* Stop here if not successful */
+  }
 
-	/* Start the scheduler. */
-	vTaskStartScheduler();
+  /* Start the scheduler. */
+  vTaskStartScheduler();
 
   while(1)
   {
