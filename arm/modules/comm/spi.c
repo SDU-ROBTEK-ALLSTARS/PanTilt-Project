@@ -1,4 +1,3 @@
-
 /* EMP course standard headers */
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
@@ -8,6 +7,11 @@
 
 /* This modules header */
 #include "spi.h"
+
+/**
+ * @file spi.c
+ *
+ */
 
 
 /**
@@ -54,6 +58,72 @@ void spi_init_hw(void)
 }
 
 /**
+ * Get the masked interrupt status
+ *
+ * @param None
+ * @return INT8U value defined as SPI_RXINT or SPI_TXINT
+ */
+INT8U spi_get_masked_interrupt(void)
+{
+  INT8U ret_val;
+  switch(SSI0_MIS_R)
+  {
+  case SSI_MIS_RXMIS:
+    ret_val = SPI_RXINT;
+    break;
+  case SSI_MIS_TXMIS:
+    ret_val = SPI_TXINT;
+    break;
+  default:
+    ret_val = 0;
+    break;
+  }
+  return ret_val;
+}
+
+/**
+ * Un-masks the interrupt passed as an argument
+ *
+ * @param INT8U value defined as SPI_RXINT or SPI_TXINT
+ * @return None
+ */
+void spi_interrupt_enable(INT8U interrupt_id)
+{
+  switch(interrupt_id)
+  {
+  case SPI_RXINT:
+    SSI0_MIS_R |= SSI_IM_RXIM;
+    break;
+  case SPI_TXINT:
+    SSI0_MIS_R |= SSI_IM_TXIM;
+    break;
+  default:
+    break;
+  }
+}
+
+/**
+ * Masks the interrupt passed as an argument
+ *
+ * @param INT8U value defined as SPI_RXINT or SPI_TXINT
+ * @return None
+ */
+void spi_interrupt_disable(INT8U interrupt_id)
+{
+  switch(interrupt_id)
+  {
+  case SPI_RXINT:
+    SSI0_MIS_R &= ~(SSI_IM_RXIM);
+    break;
+  case SPI_TXINT:
+    SSI0_MIS_R &= ~(SSI_IM_TXIM);
+    break;
+  default:
+    break;
+  }
+}
+
+/**
  * Puts data in the SPI hardware outgoing-FIFO.
  *
  * @param data is the data element to be sent.
@@ -70,7 +140,7 @@ void spi_init_hw(void)
  */
 INT8U spi_data_put(INT16U data)
 {
-  if (!spi_out_full())
+  if (SSI0_SR_R & SSI_SR_TNF)
   {
     SSI0_DR_R = data;
     return 1;
@@ -94,7 +164,7 @@ INT8U spi_data_put(INT16U data)
  */
 INT8U spi_data_get(INT16U *p_data)
 {
-  if (!spi_in_empty())
+  if (SSI0_SR_R & SSI_SR_RNE)
   {
     *p_data = SSI0_DR_R;
     return 1;
