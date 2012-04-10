@@ -9,8 +9,12 @@
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
 
+/* Hardware definitions */
+#include "lm3s6965.h"
+
 /* Driver module includes */
 #include "sysctl/sysctl.h"
+#include "sysctl/status_led.h"
 #include "comm/spi.h"
 
 /* Tasks */
@@ -24,10 +28,13 @@ int main(void)
   hardware_setup();
 
   /* Task initialization */
-  BOOLEAN success = spi_gatekeeper_init();
-  while(!success)
+  if (!spi_gatekeeper_task_init() ||
+      !status_led_task_init())
   {
-    /* Stop here if not successful */
+    while(1)
+    {
+      /* Stop here if not successful */
+    }
   }
 
   /* Start the scheduler. */
@@ -45,5 +52,6 @@ void hardware_setup(void)
   sysctl_global_int_disable();
   sysctl_mclk_init();
   spi_init_hw();
+  status_led_init_hw();
   sysctl_global_int_enable();
 }
