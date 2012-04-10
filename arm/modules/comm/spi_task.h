@@ -2,8 +2,8 @@
 #ifndef SPI_TASK_H
 #define SPI_TASK_H
 
-#define spi_gatekeeper_task_PRIORITY   (tskIDLE_PRIORITY + 1)
-#define spi_gatekeeper_task_STACK_SIZE configMINIMAL_STACK_SIZE
+#define SPI_GATEKEEPER_TASK_PRIORITY   (tskIDLE_PRIORITY + 1)
+#define SPI_GATEKEEPER_TASK_STACK_SIZE configMINIMAL_STACK_SIZE
 #define SPI_QUEUE_OUT_SIZE             16
 #define SPI_QUEUE_IN_SIZE              SPI_QUEUE_OUT_SIZE
 

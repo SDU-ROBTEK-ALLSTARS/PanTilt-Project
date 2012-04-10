@@ -77,10 +77,10 @@ BOOLEAN spi_gatekeeper_task_init(void)
 
   /* Create gatekeeper task */
   INT8U task_create_success = xTaskCreate(spi_gatekeeper_task,
-                                          (signed portCHAR *)"spi_gatekeeper_task",
-                                          spi_gatekeeper_task_STACK_SIZE,
+                                          (signed portCHAR *)"SPI_GATEKEEPER",
+                                          SPI_GATEKEEPER_TASK_STACK_SIZE,
                                           NULL,
-                                          spi_gatekeeper_task_PRIORITY,
+                                          SPI_GATEKEEPER_TASK_PRIORITY,
                                           NULL);
 
   /* Make sure everything is constructed succesfully.
@@ -121,7 +121,7 @@ BOOLEAN spi_gatekeeper_task_test_init(void)
                                           (signed portCHAR *)"SPI_GK_TEST",
                                           configMINIMAL_STACK_SIZE,
                                           NULL,
-                                          spi_gatekeeper_task_PRIORITY,
+                                          SPI_GATEKEEPER_TASK_PRIORITY,
                                           NULL);
 
   /* Make sure everything is constructed succesfully.
