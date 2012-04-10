@@ -8,8 +8,8 @@
 #define SPI_CLKRATE   4  /* Integer from 0 to 255 */
                          /* SPI clock frequency is =
                             MCLK / (SPI_PRESCALE * (1 + SPI_CLKRATE)) */
-
 #define SPI_DATA_SIZE 8  /* Integer from 4 to 16 defining size of one frame */
+#define SPI_LOOPBACK  0
 
 extern void spi_init_hw(void);
 extern INT8U spi_data_put(INT16U data);

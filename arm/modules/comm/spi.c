@@ -44,7 +44,10 @@ void spi_init_hw(void)
                   & ~SSI_CR0_SPH );
 
   /* FOR TESTING: LOOPBACK MODE! */
-  SSI0_CR1_R |= SSI_CR1_LBM;
+  if (SPI_LOOPBACK)
+  {
+    SSI0_CR1_R |= SSI_CR1_LBM;
+  }
 
   /* Enable SPI serial port */
   SSI0_CR1_R |= SSI_CR1_SSE;
