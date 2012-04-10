@@ -40,7 +40,7 @@ BOOLEAN status_led_task_init(void)
 {
   /* Create test task */
   INT8U task_create_success = xTaskCreate(status_led_task,
-                                          (signed portCHAR *)"SPI_GK_TEST",
+                                          (signed portCHAR *)"STATUS_LED",
                                           STATUS_LED_STACK_SIZE,
                                           NULL,
                                           STATUS_LED_PRIORITY,
