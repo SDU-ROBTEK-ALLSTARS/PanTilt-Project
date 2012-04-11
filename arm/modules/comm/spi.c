@@ -1,9 +1,10 @@
-/* EMP course standard headers */
-#include "inc/glob_def.h"
-#include "inc/emp_type.h"
 
 /* Hardware definitions */
 #include "lm3s6965.h"
+
+/* EMP course standard headers */
+#include "inc/glob_def.h"
+#include "inc/emp_type.h"
 
 /* This modules header */
 #include "spi.h"
@@ -47,6 +48,9 @@ void spi_init_hw(void)
                    | SSI_CR0_SPO | SSI_CR0_FRF_MOTO | SPI_DATA_SIZE)
                   & ~SSI_CR0_SPH );
 
+  /* Enable the SPI interrupt in NVIC */
+  NVIC_EN0_R |= (1 << 7);
+
   /* FOR TESTING: LOOPBACK MODE! */
   if (SPI_LOOPBACK)
   {
@@ -61,66 +65,54 @@ void spi_init_hw(void)
  * Get the masked interrupt status
  *
  * @param None
- * @return INT8U value defined as SPI_RXINT or SPI_TXINT
+ *
+ * The return value can be ANDed with SSI_MIS_xxxx value to check
+ * individual interrupt assertions.
+ *
+ * @return INT32U masked interrupt status
  */
-INT8U spi_get_masked_interrupt(void)
+INT32U spi_masked_int_status(void)
 {
-  INT8U ret_val;
-  switch(SSI0_MIS_R)
-  {
-  case SSI_MIS_RXMIS:
-    ret_val = SPI_RXINT;
-    break;
-  case SSI_MIS_TXMIS:
-    ret_val = SPI_TXINT;
-    break;
-  default:
-    ret_val = 0;
-    break;
-  }
-  return ret_val;
+  return SSI0_MIS_R;
 }
 
 /**
  * Un-masks the interrupt passed as an argument
  *
- * @param INT8U value defined as SPI_RXINT or SPI_TXINT
+ * @param INT32U value defined as SSI_IM_RXIM, SSI_IM_TXIM, SSI_IM_RORIM
+ * or SSI_IM_RTIM in the hardware register definitions.
+ *
  * @return None
  */
-void spi_interrupt_enable(INT8U interrupt_id)
+void spi_interrupt_enable(INT32U interrupt_ids)
 {
-  switch(interrupt_id)
-  {
-  case SPI_RXINT:
-    SSI0_MIS_R |= SSI_IM_RXIM;
-    break;
-  case SPI_TXINT:
-    SSI0_MIS_R |= SSI_IM_TXIM;
-    break;
-  default:
-    break;
-  }
+  SSI0_IM_R |= interrupt_ids;
 }
 
 /**
  * Masks the interrupt passed as an argument
  *
- * @param INT8U value defined as SPI_RXINT or SPI_TXINT
+ * @param INT32U value defined as SSI_IM_RXIM, SSI_IM_TXIM, SSI_IM_RORIM
+ * or SSI_IM_RTIM in the hardware register definitions.
+ *
  * @return None
  */
-void spi_interrupt_disable(INT8U interrupt_id)
+void spi_interrupt_disable(INT32U interrupt_ids)
 {
-  switch(interrupt_id)
-  {
-  case SPI_RXINT:
-    SSI0_MIS_R &= ~(SSI_IM_RXIM);
-    break;
-  case SPI_TXINT:
-    SSI0_MIS_R &= ~(SSI_IM_TXIM);
-    break;
-  default:
-    break;
-  }
+  SSI0_IM_R &= ~(interrupt_ids);
+}
+
+/**
+ * Clears the interrupt flag passed as an argument
+ *
+ * @param INT32U value defined as SSI_ICR_RORIC or SSI_ICR_RTIC in the
+ * hardware register definitions.
+ *
+ * @return None
+ */
+void spi_interrupt_clear(INT32U interrupt_ids)
+{
+  SSI0_ICR_R &= ~(interrupt_ids);
 }
 
 /**
