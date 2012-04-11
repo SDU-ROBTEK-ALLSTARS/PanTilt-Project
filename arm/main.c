@@ -9,16 +9,13 @@
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
 
-/* Hardware definitions */
-#include "lm3s6965.h"
-
 /* Driver module includes */
 #include "sysctl/sysctl.h"
-#include "sysctl/status_led.h"
 #include "comm/spi.h"
 
 /* Tasks */
 #include "comm/spi_task.h"
+#include "misc/status_led.h"
 
 static void hardware_setup(void);
 
