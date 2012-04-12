@@ -25,8 +25,8 @@ int main(void)
   hardware_setup();
 
   /* Task initialization */
-  if (!spi_gatekeeper_task_init() ||
-      !status_led_task_init())
+  if ( !spi_task_init() ||
+       !status_led_task_init() )
   {
     while(1)
     {

@@ -5,6 +5,9 @@
 #include "queue.h"
 #include "semphr.h"
 
+/* Hardware definitions */
+#include "lm3s6965.h"
+
 /* EMP course standard headers */
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
@@ -16,117 +19,156 @@
 #include "spi_task.h"
 
 /**
- * SPI gatekeeper task (using FreeRTOS)
+ * @file spi_task.c
+ *
+ * Implements SPI transmission and reception handling. The consumer task(s)
+ * can get data from the spi_queue_in and provider task(s) puts data in
+ * spi_queue_out. The spi_message_t data type is used as a container. The
+ * spi_message_t.data field is what is actually transmitted on the hardware
+ * line.
+ */
+
+
+/**
+ * SPI transmit task (using FreeRTOS)
  *
  * @param pvParameters is a pointer to the task parameters (used when task
- * is created)
+ * is created).
  *
- * This tasks acts as the doorway between software I/O SPI queues and the
- * hardware buffers. The gatekeeper task is the only task permitted
- * direct access to the SPI hardware!
+ * This task checks spi_queue_out for messages waiting to be transmitted. If
+ * there is any, the task will enable the "transmit FIFO half-empty or less"-
+ * interrupt. The interrupt service routine spi_int_handler will then take
+ * care of sending data in waiting in spi_queue_out.
  *
- * @return None (the task should never return)
+ * @note If task priority is higher than tskIDLE_PRIORITY, a specified time-to-
+ * block should be specified with vTaskDelay.
+ *
+ * @return None (the task should never return).
  */
-void spi_gatekeeper_task(void *pvParameters)
+void spi_task_transmit(void *pvParameters)
 {
-  /* Initialize a message struct. Only one is used as temporary storage
-     for both in- and outgoing messages: The FreeRTOS queue implementation
-     copies by value. */
-  spi_message_t message;
-
   while(1)
   {
-    /* Wait for an item from the SPI outgoing queue. The task BLOCKS here
-       while waiting! */
-    xQueueReceive(spi_queue_out, &message, portMAX_DELAY);
-
-    /* Write the message to the hardware FIFO */
-    while (spi_data_put(message.data) != 1)
+    if (uxQueueMessagesWaiting(spi_queue_out))
     {
-      /* Keep trying until we succeed. */
+      spi_interrupt_enable(SSI_IM_TXIM);
+      taskYIELD();
     }
-
-    /* When data has been sent, incoming data is certain... */
-    while (spi_data_get(&message.data) != 1)
-    {
-      /* Loop until data is picked up
-         TODO: This may be a bad solution: What is the delay between
-         transmitting until data is written to the incoming buffer? */
-    }
-
-    /* Place a copy of the incoming data in the in-queue. The task will
-       BLOCK here until there is space in the in-queue! */
-    xQueueSendToBack(spi_queue_in, &message, portMAX_DELAY);
   }
 }
 
 /**
- * Initializer for the SPI gatekeeper task.
+ * SPI interrupt service routine
+ *
+ * @param None
+ *
+ * The SPI interrupt service routine handles both receive and transmit
+ * interrupts. Reception gets higher priority. The receive interrupts
+ * are enabled when spi_task_init is called. The transmit interrupt is,
+ * on the other hand, only enabled by spi_task_transmit provided there
+ * is data waiting to be sent. It is important that ONLY spi_task_transmit
+ * and spi_int_handler toggles the transmit interrupt.
+ *
+ * @return None
+ */
+void spi_int_handler(void)
+{
+  portBASE_TYPE higher_prio_task_woken = FALSE;
+  INT32U status = spi_masked_int_status();
+
+  if (status & (SSI_MIS_RTMIS | SSI_MIS_RXMIS))
+  {
+    /* The receive buffer is more than half-full, or the receive time-out has
+    triggered. Both means there should be data in the receive hardware FIFO.
+    This data is collected and sent to the spi_queue_in. */
+    spi_interrupt_clear(SSI_ICR_RTIC);
+
+    spi_message_t incoming_message;
+    BOOLEAN read_more = TRUE;
+
+    while (read_more)
+    {
+      INT8U read_succes = spi_data_get(&incoming_message.data);
+
+      if (read_succes)
+      {
+        xQueueSendToBackFromISR(spi_queue_in, &incoming_message, &higher_prio_task_woken);
+      }
+      else
+      {
+        read_more = FALSE;
+      }
+
+      /* If a higher priority (than the one that was interrupted by this
+      routine) task has woken, switch to that. */
+      portEND_SWITCHING_ISR(higher_prio_task_woken);
+    }
+  }
+  else if (status & SSI_MIS_TXMIS)
+  {
+    /* The transmit buffer is half-empty or less. If there is still data in the
+    spi_queue_out, we wish to send it. Otherwise the transmit interrupt will be
+    disabled (the spi_task_transmit can re-enable it when new data is queued) */
+    spi_message_t outgoing_message;
+    BOOLEAN write_more = TRUE;
+
+    while (write_more)
+    {
+      INT8U receive_success = xQueueReceiveFromISR(spi_queue_out, &outgoing_message, &higher_prio_task_woken);
+
+      if (receive_success == pdTRUE)
+      {
+        spi_data_put(outgoing_message.data);
+      }
+      else
+      {
+        spi_interrupt_disable(SSI_IM_TXIM);
+        write_more = FALSE;
+      }
+
+      /* If a higher priority (than the one that was interrupted by this
+      routine) task has woken, switch to that. */
+      portEND_SWITCHING_ISR(higher_prio_task_woken);
+    }
+  }
+  else
+  {
+    /* This condition should not occur. */
+  }
+}
+
+/**
+ * Initializer for SPI related tasks.
  *
  * @param None.
  *
- * This function creates the FreeRTOS SPI-gatekeeper task and associated queues.
+ * This function creates the FreeRTOS SPI-transmit task and associated queues.
+ * It also enables SPI receive interrupts.
  *
  * @return TRUE if the initialization was successful, FALSE otherwise.
+ *
+ * TODO: Set interrupt priorities?
  */
-BOOLEAN spi_gatekeeper_task_init(void)
+BOOLEAN spi_task_init(void)
 {
-  /* Create queues for in- and output */
+  /* Public queues for in- and output */
   spi_queue_out = xQueueCreate(SPI_QUEUE_OUT_SIZE, sizeof(spi_message_t));
   spi_queue_in = xQueueCreate(SPI_QUEUE_IN_SIZE, sizeof(spi_message_t));
 
   /* Create gatekeeper task */
-  INT8U task_create_success = xTaskCreate(spi_gatekeeper_task,
-                                          (signed portCHAR *)"SPI_GATEKEEPER",
-                                          SPI_GATEKEEPER_TASK_STACK_SIZE,
+  INT8U task_create_success = xTaskCreate(spi_task_transmit,
+                                          (signed portCHAR *)"SPI_TRANSMIT",
+                                          SPI_TASK_TRANSMIT_STACK_SIZE,
                                           NULL,
-                                          SPI_GATEKEEPER_TASK_PRIORITY,
+                                          SPI_TASK_TRANSMIT_PRIORITY,
                                           NULL);
 
+  /* Enable the receive "FIFO half-full or more" and "receive timeout" interrupts */
+  spi_interrupt_enable(SSI_IM_RXIM | SSI_IM_RTIM);
+
   /* Make sure everything is constructed succesfully.
-     The return value signals the outcome. */
+  The return value signals the outcome. */
   if (!spi_queue_in || !spi_queue_out || !task_create_success)
-  {
-    return FALSE;
-  }
-  else
-  {
-    return TRUE;
-  }
-}
-
-/**
- * Self-test task
- */
-void spi_gatekeeper_task_test(void *pvParameters)
-{
-  spi_message_t test_message;
-
-  while(1)
-  {
-    test_message.data = 0x88;
-    xQueueSendToBack(spi_queue_out, &test_message, portMAX_DELAY);
-
-    vTaskDelay(10);
-  }
-}
-
-/**
- * Initializes the self-test task
- */
-BOOLEAN spi_gatekeeper_task_test_init(void)
-{
-  /* Create test task */
-  INT8U task_create_success = xTaskCreate(spi_gatekeeper_task_test,
-                                          (signed portCHAR *)"SPI_GK_TEST",
-                                          configMINIMAL_STACK_SIZE,
-                                          NULL,
-                                          SPI_GATEKEEPER_TASK_PRIORITY,
-                                          NULL);
-
-  /* Make sure everything is constructed succesfully.
-     The return value signals the outcome. */
-  if (!task_create_success)
   {
     return FALSE;
   }
