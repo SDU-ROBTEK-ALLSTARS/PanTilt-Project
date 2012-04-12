@@ -88,10 +88,9 @@ void spi_int_handler(void)
 
     while (read_more)
     {
-      INT8U read_succes = spi_data_get(&incoming_message.data);
-
-      if (read_succes)
+      if (spi_data_get(&incoming_message.data) == 1)
       {
+        /* NOTE: No test is made here to see if there is room in the receive queue. */
         xQueueSendToBackFromISR(spi_queue_in, &incoming_message, &higher_prio_task_woken);
       }
       else
@@ -114,10 +113,10 @@ void spi_int_handler(void)
 
     while (write_more)
     {
-      INT8U receive_success = xQueueReceiveFromISR(spi_queue_out, &outgoing_message, &higher_prio_task_woken);
-
-      if (receive_success == pdTRUE)
+      if (xQueueReceiveFromISR(spi_queue_out, &outgoing_message, &higher_prio_task_woken) == pdTRUE)
       {
+        /* There should be room in the transmit FIFO since the transmit interrupt
+        brought us here */
         spi_data_put(outgoing_message.data);
       }
       else
@@ -155,7 +154,7 @@ BOOLEAN spi_task_init(void)
   spi_queue_out = xQueueCreate(SPI_QUEUE_OUT_SIZE, sizeof(spi_message_t));
   spi_queue_in = xQueueCreate(SPI_QUEUE_IN_SIZE, sizeof(spi_message_t));
 
-  /* Create gatekeeper task */
+  /* Create transmit task */
   INT8U task_create_success = xTaskCreate(spi_task_transmit,
                                           (signed portCHAR *)"SPI_TRANSMIT",
                                           SPI_TASK_TRANSMIT_STACK_SIZE,
