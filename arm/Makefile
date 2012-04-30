@@ -118,14 +118,13 @@ cleandebug: clean
 
 cleanrelease: clean
 
-clean: cleanlibs
 clean:
 	@touch Makefile
 	@rm -v -R $(BUILD_TOP_DIR)
 	@rm -v $(OBJS)
 
-cleanlibs:
-	@make clean -C $(STELLARISWARE_DIR)/driverlib -f Makefile.driverlib-cm3
+#cleanlibs:
+#	@make clean -C $(STELLARISWARE_DIR)/driverlib -f Makefile.driverlib-cm3
 
 program:
 	@openocd -d0 -f "board/ek-lm3s6965.cfg" -c "init" -c "reset init" -c "halt" -c "flash write_image erase $(BUILD_DIR)/$(PROJ_NAME).bin" -c "verify_image $(BUILD_DIR)/$(PROJ_NAME).bin" -c "reset" -c shutdown
