@@ -95,7 +95,7 @@ $(BUILD_DIR)/$(PROJ_NAME).bin: $(BUILD_DIR)/$(PROJ_NAME).axf
 	@echo "OBJCOPY\t$^ -> $@"
 	@$(OBJCOPY) $(BUILD_DIR)/$(PROJ_NAME).axf -O binary $(BUILD_DIR)/$(PROJ_NAME).bin
 
-$(BUILD_DIR)/$(PROJ_NAME).axf: $(LIBS) $(OBJS)
+$(BUILD_DIR)/$(PROJ_NAME).axf: $(OBJS)
 	@echo "LD\t$(^F) -> $@"
 	@$(CC) $(CFLAGS) $(OBJS) $(LIBS) $(LINKER_FLAGS)
 
@@ -105,8 +105,8 @@ $(OBJS): %.o : %.c
 
 #@mkdir -p $(@D)
 
-$(LIBS):
-	@make -C $(STELLARISWARE_DIR)/driverlib -f Makefile.driverlib-cm3
+#$(LIBS):
+#	@make -C $(STELLARISWARE_DIR)/driverlib -f Makefile.driverlib-cm3
 
 postbuild:
 	@echo "SIZE\t$(BUILD_DIR)/$(PROJ_NAME).axf"
