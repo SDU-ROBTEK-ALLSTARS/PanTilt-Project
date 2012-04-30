@@ -14,9 +14,6 @@
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
 
-/* Tests */
-#include "test/comm/spi_loopback.h"
-
 /* Module includes */
 #include "comm/spi.h"
 #include "comm/spi_task.h"
@@ -31,8 +28,7 @@ int main(void)
 
   /* Task initialization */
   if ( spi_task_init() &&
-       status_led_task_init() &&
-       spi_loopback_test_init() )
+       status_led_task_init() )
   {
     vTaskStartScheduler();
   }
