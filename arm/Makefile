@@ -37,7 +37,6 @@ SOURCE =\
 	$(MODULES_DIR)/comm/spi.c \
 	$(MODULES_DIR)/comm/spi_task.c \
 	$(MODULES_DIR)/debug/debug.c \
-	$(MODULES_DIR)/sysctl/sysctl.c \
 	$(MODULES_DIR)/misc/status_led.c \
 	$(RTOS_SOURCE_DIR)/list.c \
 	$(RTOS_SOURCE_DIR)/queue.c \
