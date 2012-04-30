@@ -5,15 +5,20 @@
 #include "queue.h"
 #include "semphr.h"
 
+/* StellarisWare drivers */
+#include "inc/hw_types.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/interrupt.h"
+
 /* EMP course standard headers */
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
 
-/* Driver module includes */
-#include "sysctl/sysctl.h"
-#include "comm/spi.h"
+/* Tests */
+#include "test/comm/spi_loopback.h"
 
-/* Tasks */
+/* Module includes */
+#include "comm/spi.h"
 #include "comm/spi_task.h"
 #include "misc/status_led.h"
 
@@ -25,17 +30,12 @@ int main(void)
   hardware_setup();
 
   /* Task initialization */
-  if ( !spi_task_init() ||
-       !status_led_task_init() )
+  if ( spi_task_init() &&
+       status_led_task_init() &&
+       spi_loopback_test_init() )
   {
-    while(1)
-    {
-      /* Stop here if not successful */
-    }
+    vTaskStartScheduler();
   }
-
-  /* Start the scheduler. */
-  vTaskStartScheduler();
 
   while(1)
   {
@@ -46,9 +46,12 @@ int main(void)
 
 void hardware_setup(void)
 {
-  sysctl_global_int_disable();
-  sysctl_mclk_init();
+  /* Drive at 50MHz crystal clock */
+  SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_8MHZ);
+  SysCtlDelay(2);
+
   spi_init_hw();
   status_led_init_hw();
-  sysctl_global_int_enable();
+
+  IntMasterEnable();
 }

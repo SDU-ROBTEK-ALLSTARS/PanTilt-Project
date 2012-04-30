@@ -1,6 +1,6 @@
 
 /* Hardware definitions */
-#include "lm3s6965.h"
+#include "inc/lm3s6965.h"
 
 /* EMP course standard headers */
 #include "inc/glob_def.h"
@@ -52,7 +52,7 @@ void spi_init_hw(void)
   NVIC_EN0_R |= (1 << 7);
 
   /* FOR TESTING: LOOPBACK MODE! */
-  if (SPI_LOOPBACK)
+  if (SPI_LOOPBACK_ON)
   {
     SSI0_CR1_R |= SSI_CR1_LBM;
   }

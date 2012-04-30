@@ -10,7 +10,7 @@
 #include "inc/emp_type.h"
 
 /* Hardware definitions */
-#include "lm3s6965.h"
+#include "inc/lm3s6965.h"
 
 /* This modules header */
 #include "status_led.h"

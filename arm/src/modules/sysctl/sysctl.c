@@ -1,6 +1,6 @@
 
 
-#include "lm3s6965.h"
+#include "inc/lm3s6965.h"
 #include "sysctl.h"
 
 /**

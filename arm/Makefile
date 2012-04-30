@@ -12,22 +12,28 @@ SIZE = arm-none-eabi-size
 LDSCRIPT = lm3s6569.ld
 
 # "Top level" directories
-RTOS_SOURCE_DIR = freertos/Source
-MODULES_DIR = modules
-EMPCOURSE_DIR = empcourse
+SRC_DIR = src
+LIB_DIR = lib
+RTOS_SOURCE_DIR = $(SRC_DIR)/freertos/Source
+MODULES_DIR = $(SRC_DIR)/modules
+EMPCOURSE_DIR = $(SRC_DIR)/empcourse
+STELLARISWARE_DRIVER_DIR = $(LIB_DIR)/SW-DRL-8555
 
 # Directories that the compiler should look for #includes in
 INCLUDE_DIRS =\
 	-I . \
+	-I $(SRC_DIR) \
 	-I $(EMPCOURSE_DIR) \
 	-I $(MODULES_DIR) \
+	-I $(STELLARISWARE_DRIVER_DIR) \
 	-I $(RTOS_SOURCE_DIR)/include \
 	-I $(RTOS_SOURCE_DIR)/portable/GCC/ARM_CM3
 
 # Source files to be compiled
 SOURCE =\
-	startup.c \
-	main.c \
+	$(SRC_DIR)/startup.c \
+	$(SRC_DIR)/main.c \
+	$(SRC_DIR)/test/comm/spi_loopback.c \
 	$(MODULES_DIR)/comm/spi.c \
 	$(MODULES_DIR)/comm/spi_task.c \
 	$(MODULES_DIR)/debug/debug.c \
@@ -59,13 +65,13 @@ LINKER_FLAGS =\
 	-T$(LDSCRIPT) \
 	-Xlinker --gc-sections
 
-#LIBS =\
-#	$(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libdriver.a \
-#	$(LUMINARY_DRIVER_DIR)/arm-none-eabi-gcc/libgr.a
+LIBS =\
+	$(STELLARISWARE_DRIVER_DIR)/driverlib/gcc-cm3/libdriver-cm3.a
 
 BUILD_DIR = $(BUILD_TOP_DIR)
 
-OBJS = $(patsubst %.c,$(BUILD_DIR)/obj/%.o,$(SOURCE))
+#OBJS = $(patsubst %.c,$(BUILD_DIR)/obj/%.o,$(SOURCE))
+OBJS = $(SOURCE:.c=.o)
 
 # Targets
 all: debug
@@ -82,7 +88,8 @@ binary: postbuild
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)/obj
+
+#@mkdir -p $(BUILD_DIR)/obj
 
 $(BUILD_DIR)/$(PROJ_NAME).bin: $(BUILD_DIR)/$(PROJ_NAME).axf
 	@echo "OBJCOPY\t$^ -> $@"
@@ -92,10 +99,11 @@ $(BUILD_DIR)/$(PROJ_NAME).axf: $(OBJS)
 	@echo "LD\t$(^F) -> $@"
 	@$(CC) $(CFLAGS) $(OBJS) $(LIBS) $(LINKER_FLAGS)
 
-$(OBJS): $(BUILD_DIR)/obj/%.o : %.c
+$(OBJS): %.o : %.c
 	@echo "CC\t$< -> $@"
-	@mkdir -p $(@D)
 	@$(CC) $(CFLAGS) -c $< -o $@
+
+#@mkdir -p $(@D)
 
 postbuild:
 	@echo "SIZE\t$(BUILD_DIR)/$(PROJ_NAME).axf"
@@ -110,6 +118,7 @@ cleanrelease: clean
 clean:
 	@touch Makefile
 	@rm -v -R $(BUILD_TOP_DIR)
+	@rm -v $(OBJS)
 
 program:
 	@openocd -d0 -f "board/ek-lm3s6965.cfg" -c "init" -c "reset init" -c "halt" -c "flash write_image erase $(BUILD_DIR)/$(PROJ_NAME).bin" -c "verify_image $(BUILD_DIR)/$(PROJ_NAME).bin" -c "reset" -c shutdown

@@ -9,7 +9,11 @@
                            /* SPI clock frequency is =
                               MCLK / (SPI_PRESCALE * (1 + SPI_CLKRATE)) */
 #define SPI_DATA_SIZE   8  /* Integer from 4 to 16 defining size of one frame */
-#define SPI_LOOPBACK    1
+
+/* Loopback mode can be set to test the SPI software */
+#ifndef SPI_LOOPBACK_ON
+  #define SPI_LOOPBACK_ON 0
+#endif
 
 void spi_init_hw(void);
 INT8U spi_data_put(INT16U data);

@@ -6,7 +6,7 @@
 #include "semphr.h"
 
 /* Hardware definitions */
-#include "lm3s6965.h"
+#include "inc/lm3s6965.h"
 
 /* EMP course standard headers */
 #include "inc/glob_def.h"
