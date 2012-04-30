@@ -33,7 +33,6 @@ INCLUDE_DIRS =\
 SOURCE =\
 	$(SRC_DIR)/startup.c \
 	$(SRC_DIR)/main.c \
-	$(SRC_DIR)/test/comm/spi_loopback.c \
 	$(MODULES_DIR)/comm/spi.c \
 	$(MODULES_DIR)/comm/spi_task.c \
 	$(MODULES_DIR)/debug/debug.c \
