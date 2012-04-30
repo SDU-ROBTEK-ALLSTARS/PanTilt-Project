@@ -47,6 +47,7 @@ SOURCE =\
 # Compiler flags
 CFLAGS =\
 	-DGCC_ARMCM3 \
+	-D__NEWLIB__ \
 	-std=c99 \
 	-mthumb \
 	-mcpu=cortex-m3 \
