@@ -48,6 +48,7 @@ extern void xPortPendSVHandler(void);
 extern void xPortSysTickHandler(void);
 extern void vPortSVCHandler(void);
 extern void spi_int_handler(void);
+extern void uart0_isr(void);
 
 //*****************************************************************************
 //
@@ -55,7 +56,7 @@ extern void spi_int_handler(void);
 //
 //*****************************************************************************
 #ifndef STACK_SIZE
-  #define STACK_SIZE 120
+  #define STACK_SIZE 512
 #endif
 static unsigned long pulStack[STACK_SIZE];
 
@@ -90,7 +91,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
     IntDefaultHandler,                      // GPIO Port E
-    IntDefaultHandler,                      // UART0 Rx and Tx
+    uart0_isr,                              // UART0 Rx and Tx
     IntDefaultHandler,                      // UART1 Rx and Tx
     spi_int_handler,                        // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
