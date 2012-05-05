@@ -1,31 +1,14 @@
 
-
 #ifndef SPI_H
 #define SPI_H
 
-/* Configurable SPI settings */
-#define SPI_PRESCALE    10 /* Even integer from 2 to 254 */
-#define SPI_CLKRATE     4  /* Integer from 0 to 255 */
-                           /* SPI clock frequency is =
-                              MCLK / (SPI_PRESCALE * (1 + SPI_CLKRATE)) */
-#define SPI_DATA_SIZE   8  /* Integer from 4 to 16 defining size of one frame */
+#define SPI_CONF_BITRATE       2000000
+#define SPI_CONF_DATA_WIDTH    8
+#define SPI_NUM_MAX_USERTASKS  16
 
-/* Loopback mode can be set to test the SPI software */
-#ifndef SPI_LOOPBACK_ON
-  #define SPI_LOOPBACK_ON 0
-#endif
-
-void spi_init_hw(void);
-INT8U spi_data_put(INT16U data);
-INT8U spi_data_get(INT16U *p_data);
-void spi_interrupt_enable(INT32U interrupt_id);
-void spi_interrupt_disable(INT32U interrupt_id);
-INT32U spi_masked_int_status(void);
-void spi_interrupt_clear(INT32U interrupt_ids);
-BOOLEAN spi_out_full(void);
-BOOLEAN spi_out_empty(void);
-BOOLEAN spi_in_full(void);
-BOOLEAN spi_in_empty(void);
-BOOLEAN spi_busy(void);
+void spi_config_hw(void);
+BOOLEAN spi_init(void);
+INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_to_block);
+INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block);
 
 #endif /* SPI_H */

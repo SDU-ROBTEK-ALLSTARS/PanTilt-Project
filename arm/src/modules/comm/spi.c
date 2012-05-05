@@ -1,6 +1,19 @@
+/* FreeRTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 
-/* Hardware definitions */
+/* StellarisWare drivers */
 #include "inc/lm3s6965.h"
+#include "inc/hw_types.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/debug.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/gpio.h"
+#include "driverlib/ssi.h"
 
 /* EMP course standard headers */
 #include "inc/glob_def.h"
@@ -8,256 +21,470 @@
 
 /* This modules header */
 #include "spi.h"
+#include "comm/uart.h"
 
 /**
  * @file spi.c
  *
+ * Using the FreeRTOS pvPortMalloc (heap2.c) to avoid the libc malloc() for now
+ *
+ * Relies heavily on the fact that the MCU running this code is the master of
+ * the SPI!
+ *
+ * TODO:
+ * - Documentation
+ * - ISR speed optimization (write directly to hardware here)
+ * - Garbage collection: Deletion of list items (queues) which have not been
+ *   used for a long time.
+ * - Mutex considerations
  */
 
+#define SPI_INTERN_QUEUE_IN_SIZE     32
+#define SPI_PUBLIC_QUEUE_SIZE        16
+
+typedef unsigned char spi_message_t;
+
+/* Types holding list information (one per list) and list items. */
+struct queue_list_item_t
+{
+  struct queue_list_item_t *next;
+  struct queue_list_item_t *prev;
+  xTaskHandle  owner_task;
+  xQueueHandle queue_in;
+  xQueueHandle queue_out;
+  INT32U num_waiting_to_receive;
+};
+struct queue_list_t
+{
+  struct queue_list_item_t *head;
+  struct queue_list_item_t *tail;
+  INT32U num_items;
+};
+
+/* List to store which queues are associated with which tasks,
+   data input queue and queue of tasks waiting to receive data */
+static struct queue_list_t list_registered_tasks;
+static xQueueHandle intern_queue_in, intern_queue_waiting_to_receive;
 
 /**
- * Sets up the SSI hardware interface as follows:
- *
- * - Freescale SPI mode
- * - Master
- * - Clock as defined by SPI_PRESCALE and SPI_CLKRATE
- * - Data frame size as defined by SPI_DATA_SIZE
+ * @internal
  */
-void spi_init_hw(void)
+void queue_list_initialize(struct queue_list_t *p_list)
 {
-  /* Enable periphiral clock */
-  SYSCTL_RCGC1_R |= SYSCTL_RCGC1_SSI0;
-
-  /* Wait a little */
-  __asm("nop\n\tnop\n\tnop\n\tnop\n\tnop\n\tnop\n\tnop");
-
-  /* Make sure the serial port is disabled */
-  SSI0_CR1_R &= ~(SSI_CR1_SSE);
-
-  /* I am Master! */
-  SSI0_CR1_R &= ~(SSI_CR1_SOD | SSI_CR1_MS | SSI_CR1_LBM);
-
-  /* Set clock prescaler */
-  SSI0_CPSR_R |= (SSI_CPSR_CPSDVSR_M & SPI_PRESCALE);
-
-  /* Set clock rate,
-     Data is captured on the first clock edge transition,
-     SSIClk is HIGH when idle
-     Freescale SPI frame format */
-  SSI0_CR0_R |= ( ((SSI_CR0_SCR_M & (SPI_CLKRATE << 8))
-                   | SSI_CR0_SPO | SSI_CR0_FRF_MOTO | SPI_DATA_SIZE)
-                  & ~SSI_CR0_SPH );
-
-  /* Enable the SPI interrupt in NVIC */
-  NVIC_EN0_R |= (1 << 7);
-
-  /* FOR TESTING: LOOPBACK MODE! */
-  if (SPI_LOOPBACK_ON)
-  {
-    SSI0_CR1_R |= SSI_CR1_LBM;
-  }
-
-  /* Enable SPI serial port */
-  SSI0_CR1_R |= SSI_CR1_SSE;
+  p_list->head = NULL;
+  p_list->tail = NULL;
+  p_list->num_items = 0;
 }
 
 /**
- * Get the masked interrupt status
+ * @internal
+ */
+void queue_list_item_insert_end(struct queue_list_t *p_list, struct queue_list_item_t *p_item)
+{
+  if (p_list->head == NULL)
+  {
+    /* List is empty: This becomes first and last item in it */
+    p_item->next = NULL;
+    p_item->prev = NULL;
+    p_list->head = p_item;
+    p_list->tail = p_list->head;
+  }
+  else
+  {
+    /* List is not empty, insert in back */
+    p_item->next = NULL;
+    p_item->prev = p_list->tail;
+    p_list->tail->next = p_item;
+    p_list->tail = p_item;
+  }
+  p_list->num_items++;
+}
+
+/**
+ * @internal
+ */
+void queue_list_item_remove(struct queue_list_t *p_list, struct queue_list_item_t *p_item)
+{
+  if (p_list->head != NULL && p_item != NULL)
+  {
+    if (p_item == p_list->head)
+    {
+      p_list->head = p_item->next;
+      p_list->head->prev = NULL;
+    }
+    else if (p_item == p_list->tail)
+    {
+      p_list->tail = p_item->prev;
+      p_list->tail->next = NULL;
+    }
+    else
+    {
+      p_item->prev->next = p_item->next;
+      p_item->next->prev = p_item->prev;
+    }
+    p_list->num_items--;
+  }
+}
+
+/**
+ * @internal
+ */
+struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list,
+                                               xTaskHandle owner_task_target)
+{
+  struct queue_list_item_t *current_item = NULL;
+
+  if (p_list->head != NULL)
+  {
+    current_item = p_list->head;
+
+    while (current_item != NULL)
+    {
+      if (current_item->owner_task == owner_task_target)
+      {
+        break;
+      }
+      else
+      {
+        current_item = current_item->next;
+      }
+    }
+  }
+
+  /* Dont return HEAD if its not the right one */
+  if (current_item->owner_task != owner_task_target)
+  {
+    return NULL;
+  }
+  else
+  {
+    return current_item;
+  }
+}
+
+/**
+ * @internal (not used atm)
+ */
+struct queue_list_item_t *queue_list_item_new(xTaskHandle task_handle)
+{
+  struct queue_list_item_t *new_list_item;
+  new_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+
+  if (new_list_item != NULL)
+  {
+    new_list_item->owner_task = task_handle;
+    new_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+    new_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+    new_list_item->num_waiting_to_receive = 0;
+  }
+
+  return new_list_item;
+}
+
+/**
+ * Writes to a tasks private SPI queue.
+ *
+ * @param buf is a pointer to the data to write.
+ * @param nbytes is the number of bytes to write.
+ * @param ticks_to_block is the amount of ticks the function may block for.
+ *
+ * @return the number of bytes succesfully written.
+ */
+INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_to_block)
+{
+  INT32U result;
+  xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
+  struct queue_list_item_t *calling_task_list_item =
+                          queue_list_item_find(&list_registered_tasks, current_task_handle);
+
+  /* If the calling task is un-registered, make a list item (containing I/O queues)
+  for it */
+  if (calling_task_list_item == NULL)
+  {
+    struct queue_list_item_t *new_caller_list_item;
+    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+
+    if (new_caller_list_item != NULL)
+    {
+      new_caller_list_item->owner_task = current_task_handle;
+      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+      new_caller_list_item->num_waiting_to_receive = 0;
+
+      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+
+      calling_task_list_item = new_caller_list_item;
+    }
+  }
+
+  /* Write data to transmit. */
+  result = 0;
+
+  if (calling_task_list_item != NULL)
+  {
+    while (result < nbytes)
+    {
+      if (xQueueSendToBack(calling_task_list_item->queue_out, &buf[result], ticks_to_block) == errQUEUE_FULL)
+      {
+        break;
+      }
+      else
+      {
+        result++;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Reads data from a tasks private SPI queue.
+ *
+ * @param buf is a pointer to a memory area to store read data.
+ * @param nbytes is the number of bytes to read.
+ * @param ticks_to_block is the amount of ticks the function may block for.
+ *
+ * @return the number of bytes succesfully read.
+ */
+INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block)
+{
+  INT32U result;
+  xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
+  struct queue_list_item_t *calling_task_list_item =
+                           queue_list_item_find(&list_registered_tasks, current_task_handle);
+
+  /* If the calling task is un-registered, make a list item (containing I/O queues)
+  for it */
+  if (calling_task_list_item == NULL)
+  {
+    struct queue_list_item_t *new_caller_list_item;
+    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+
+    if (new_caller_list_item != NULL)
+    {
+      new_caller_list_item->owner_task = current_task_handle;
+      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+      new_caller_list_item->num_waiting_to_receive = 0;
+
+      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+
+      calling_task_list_item = new_caller_list_item;
+    }
+  }
+
+  /* Read, if task is registered */
+  result = 0;
+
+  if (calling_task_list_item != NULL)
+  {
+    while (result < nbytes)
+    {
+      if (xQueueReceive(calling_task_list_item->queue_in, &buf[result], ticks_to_block) == pdTRUE)
+      {
+        result++;
+      }
+      else
+      {
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * SPI transmit task (using FreeRTOS)
+ *
+ * @param params is a pointer to the task parameters (used when task
+ * is created).
+ *
+ * @return None (the task should never return).
+ */
+void task_spi_transmit(void *params)
+{
+  struct queue_list_item_t *current_item;
+  INT32U num_messages_sent, num_messages_waiting;
+  spi_message_t message;
+
+  while(1)
+  {
+    /* If there are messages waiting in ANY of the task-out-queues, transmit
+    that data and remember by who it was sent and how much. */
+    if (list_registered_tasks.head != NULL)
+    {
+      current_item = list_registered_tasks.head;
+
+      while (current_item != NULL)
+      {
+        num_messages_sent = 0;
+        num_messages_waiting = uxQueueMessagesWaiting(current_item->queue_out);
+
+        while (num_messages_sent < num_messages_waiting)
+        {
+          xQueueReceive(current_item->queue_out, &message, portMAX_DELAY);
+          SSIDataPut(SSI0_BASE, (unsigned long) message);
+          /* FOR DEBUG / "FAKE" LOOPBACK: xQueueSendToBack(intern_queue_in, &message, portMAX_DELAY); */
+          num_messages_sent++;
+        }
+
+        if (num_messages_sent != 0)
+        {
+          current_item->num_waiting_to_receive = num_messages_sent;
+          xQueueSendToBack(intern_queue_waiting_to_receive, &current_item, portMAX_DELAY);
+        }
+
+        current_item = current_item->next;
+      }
+    }
+  }
+}
+
+/**
+ * SPI receive task (using FreeRTOS)
+ *
+ * @param params is a pointer to the task parameters (used when task
+ * is created).
+ *
+ * @return None (the task should never return).
+ */
+void task_spi_receive(void *params)
+{
+  spi_message_t message;
+  struct queue_list_item_t *receiver;
+
+  while(1)
+  {
+    xQueueReceive(intern_queue_in, &message, portMAX_DELAY);
+
+    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, (portTickType) 0xFF) == pdTRUE)
+    {
+      xQueueSendToBack(receiver->queue_in, &message, portMAX_DELAY);
+      receiver->num_waiting_to_receive--;
+
+      if (receiver->num_waiting_to_receive == 0)
+      {
+        /* Receive just to delete from queue */
+        xQueueReceive(intern_queue_waiting_to_receive, &receiver, portMAX_DELAY);
+      }
+    }
+    /*
+    else
+    {
+      Error: No receiver??
+    }
+    */
+  }
+}
+
+/**
+ * SPI interrupt service routine
  *
  * @param None
  *
- * The return value can be ANDed with SSI_MIS_xxxx value to check
- * individual interrupt assertions.
- *
- * @return INT32U masked interrupt status
- */
-INT32U spi_masked_int_status(void)
-{
-  return SSI0_MIS_R;
-}
-
-/**
- * Un-masks the interrupt passed as an argument
- *
- * @param INT32U value defined as SSI_IM_RXIM, SSI_IM_TXIM, SSI_IM_RORIM
- * or SSI_IM_RTIM in the hardware register definitions.
+ * The SPI interrupt service routine handles both receive and transmit
+ * interrupts. Reception gets higher priority. The receive interrupts
+ * are enabled when spi_task_init is called. The transmit interrupt is,
+ * on the other hand, only enabled by spi_task_transmit provided there
+ * is data waiting to be sent. It is important that ONLY spi_task_transmit
+ * and spi_int_handler toggles the transmit interrupt.
  *
  * @return None
  */
-void spi_interrupt_enable(INT32U interrupt_ids)
+void spi_int_handler(void)
 {
-  SSI0_IM_R |= interrupt_ids;
+  spi_message_t message;
+  portBASE_TYPE higher_prio_task_woken = FALSE;
+
+
+  SSIIntClear(SSI0_BASE, SSI_RXTO); //SSI_ICR_RTIC
+
+  if (SSIDataGetNonBlocking(SSI0_BASE, (unsigned long *) &message) == 1)
+  {
+    xQueueSendToBackFromISR(intern_queue_in, &message, &higher_prio_task_woken); //pdPASS
+  }
+
+  portEND_SWITCHING_ISR(higher_prio_task_woken);
 }
 
 /**
- * Masks the interrupt passed as an argument
+ * Initializer for SPI related tasks and other ressources.
  *
- * @param INT32U value defined as SSI_IM_RXIM, SSI_IM_TXIM, SSI_IM_RORIM
- * or SSI_IM_RTIM in the hardware register definitions.
+ * @param None.
  *
+ * This function creates the FreeRTOS SPI-transmit task and associated queues.
+ * It also enables SPI receive interrupts.
+ *
+ * @return TRUE if the initialization was successful, FALSE otherwise.
+ */
+BOOLEAN spi_init(void)
+{
+  /* Public queues for in- and output */
+  intern_queue_in = xQueueCreate(SPI_INTERN_QUEUE_IN_SIZE, sizeof(spi_message_t));
+  intern_queue_waiting_to_receive = xQueueCreate(SPI_NUM_MAX_USERTASKS, sizeof(struct queue_list_item_t *));
+
+  /* Create transmit task */
+  INT8U task_create_success = xTaskCreate(task_spi_transmit,
+                                          (signed portCHAR *) "SPI_TX",
+                                          configMINIMAL_STACK_SIZE,
+                                          NULL,
+                                          tskIDLE_PRIORITY,
+                                          NULL);
+
+  task_create_success |= xTaskCreate(task_spi_receive,
+                                     (signed portCHAR *) "SPI_RX",
+                                     configMINIMAL_STACK_SIZE,
+                                     NULL,
+                                     tskIDLE_PRIORITY,
+                                     NULL);
+
+  queue_list_initialize(&list_registered_tasks);
+
+  /* Make sure everything is constructed succesfully.
+  The return value signals the outcome. */
+  if (intern_queue_in && task_create_success && intern_queue_waiting_to_receive)
+  {
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/**
+ * Configures hardware periphirals for SPI function
+ *
+ * @param None
  * @return None
  */
-void spi_interrupt_disable(INT32U interrupt_ids)
+void spi_config_hw(void)
 {
-  SSI0_IM_R &= ~(interrupt_ids);
-}
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
+  SysCtlDelay(3);
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+  SysCtlDelay(3);
 
-/**
- * Clears the interrupt flag passed as an argument
- *
- * @param INT32U value defined as SSI_ICR_RORIC or SSI_ICR_RTIC in the
- * hardware register definitions.
- *
- * @return None
- */
-void spi_interrupt_clear(INT32U interrupt_ids)
-{
-  SSI0_ICR_R &= ~(interrupt_ids);
-}
+  GPIOPinTypeSSI(GPIO_PORTA_BASE, (GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5));
 
-/**
- * Puts data in the SPI hardware outgoing-FIFO.
- *
- * @param data is the data element to be sent.
- *
- * This function will attempt to write the supplied data elements to the
- * hardware transmit FIFO. The data elements can be maximum 16 bits wide,
- * but how much of the data is really being used is decided by SPI_DATA_SIZE.
- * If SPI_DATA_SIZE is shorter than the supplied data, the upper bits will
- * be discarded without notice.
- * The FIFO queue is automatically emptied as the transmission hardware
- * sends the data.
- *
- * @return 1 if write is succesful, 0 if not.
- */
-INT8U spi_data_put(INT16U data)
-{
-  if (SSI0_SR_R & SSI_SR_TNF)
-  {
-    SSI0_DR_R = data;
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
-}
+  /* Set clock rate, SPH=0, SPO=1, Freescale, 2 MHz, 8 bit data size */
+  SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
+                     SSI_MODE_MASTER, SPI_CONF_BITRATE, SPI_CONF_DATA_WIDTH);
 
-/**
- * Reads data from the SPI hardware receive-FIFO.
- *
- * @param p_data is a pointer where data should be stored.
- *
- * This function attempts to read a data element from the SPI in-going
- * hardware FIFO. If the buffer is empty, nothing is read and the
- * return value will be zero.
- *
- * @return 1 if an element is read succesfully, 0 if not.
- */
-INT8U spi_data_get(INT16U *p_data)
-{
-  if (SSI0_SR_R & SSI_SR_RNE)
-  {
-    *p_data = SSI0_DR_R;
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
-}
+  /* Enable receive "FIFO half-full or more" and "receive timeout"-interrupts */
+  IntEnable(INT_SSI0);
+  SSIIntEnable(SSI0_BASE, (SSI_RXFF | SSI_RXTO));
 
-/**
- * Checks if the outgoing FIFO is full.
- *
- * @param None.
- * @return TRUE if full, FALSE otherwise.
- */
-BOOLEAN spi_out_full(void)
-{
-  if (SSI0_SR_R & SSI_SR_TNF)
-  {
-    return FALSE;
-  }
-  else
-  {
-    return TRUE;
-  }
-}
+  /* Set interrupt priority to one level LOWER than
+  configMAX_SYSCALL_INTERRUPT_PRIORITY so that we can still use FreeRTOS API
+  functions from within it.
+  Remember: Higher value => lower priority. */
+  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + ( 1 << 5 ));
 
-/**
- * Checks if the outgoing FIFO is empty.
- *
- * @param None.
- * @return TRUE if empty, FALSE otherwise.
- */
-BOOLEAN spi_out_empty(void)
-{
-  if (SSI0_SR_R & SSI_SR_TFE)
-  {
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
+  /* LOOPBACK */
+  SSI0_CR1_R |= SSI_CR1_LBM;
 
-/**
- * Checks if the in-going FIFO is full.
- *
- * @param None.
- * @return TRUE if full, FALSE otherwise.
- */
-BOOLEAN spi_in_full(void)
-{
-  if (SSI0_SR_R & SSI_SR_RFF)
-  {
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/**
- * Checks if the in-going FIFO is empty.
- *
- * @param None.
- * @return TRUE if empty, FALSE otherwise.
- */
-BOOLEAN spi_in_empty(void)
-{
-  if (SSI0_SR_R & SSI_SR_RNE)
-  {
-    return FALSE;
-  }
-  else
-  {
-    return TRUE;
-  }
-}
-
-/**
- * Checks if the SSI unit is busy.
- *
- * @param None.
- *
- * This function tests if the SSI interface is busy. Busy means a data frame
- * is currently being transmitted or received or that the transmit FIFO is
- * not empty.
- *
- * @return TRUE is busy, FALSE if idle.
- */
-BOOLEAN spi_busy(void)
-{
-  if (SSI0_SR_R & SSI_SR_BSY)
-  {
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
+  SSIEnable(SSI0_BASE);
 }

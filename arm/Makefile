@@ -33,14 +33,17 @@ INCLUDE_DIRS =\
 SOURCE =\
 	$(SRC_DIR)/startup.c \
 	$(SRC_DIR)/main.c \
-	$(SRC_DIR)/test/comm/spi_loopback.c \
 	$(MODULES_DIR)/comm/spi.c \
-	$(MODULES_DIR)/comm/spi_task.c \
+	$(MODULES_DIR)/comm/uart.c \
+	$(MODULES_DIR)/comm/uart_protocol.c \
+	$(MODULES_DIR)/comm/uart_echo.c \
+	src/test/comm/spi_test.c \
 	$(MODULES_DIR)/debug/debug.c \
 	$(MODULES_DIR)/misc/status_led.c \
 	$(RTOS_SOURCE_DIR)/list.c \
 	$(RTOS_SOURCE_DIR)/queue.c \
 	$(RTOS_SOURCE_DIR)/tasks.c \
+	$(RTOS_SOURCE_DIR)/timers.c \
 	$(RTOS_SOURCE_DIR)/portable/GCC/ARM_CM3/port.c \
 	$(RTOS_SOURCE_DIR)/portable/MemMang/heap_2.c
 
