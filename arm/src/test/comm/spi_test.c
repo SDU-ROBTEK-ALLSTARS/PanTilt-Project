@@ -9,6 +9,7 @@
 #include "inc/glob_def.h"
 #include "inc/emp_type.h"
 
+/* Module includes */
 #include "comm/spi.h"
 #include "comm/uart.h"
 #include "comm/uart_protocol.h"
@@ -19,7 +20,30 @@
 /**
  * @file spi_test.c
  *
+ * The SPI test initializes
  */
+//
+//
+//
+//
+//
+//
+//
+//
+//&&
+//      spi_via_uart_init()
+//
+//
+//#ifdef DEBUG
+//#include "test/comm/spi_test.h"
+//#endif
+//
+//
+//  #if SPI_LOOPBACK_ON != 0
+//    SSI0_CR1_R |= SSI_CR1_LBM;
+//  #endif
+//
+
 
 static xQueueHandle spi_via_uart_queue_set, spi_via_uart_queue_get;
 
@@ -75,66 +99,7 @@ BOOLEAN spi_via_uart_init(void)
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void spi_transmitter(void *params)
-{
-  INT8U test_string1[] = "T1";
-  spi_write_from_task(test_string1, sizeof(test_string1), portMAX_DELAY);
-
-  INT8U test_string2[] = "T2";
-  spi_write_from_task(test_string2, sizeof(test_string2), portMAX_DELAY);
-
-  vTaskSuspend(NULL);
-}
-
-void spi_receiver(void *params)
-{
-
-
-  while(1)
-  {
-
-  }
-}
-
 BOOLEAN spi_test_init(void)
 {
-  /* Create test tasks */
-  INT8U task_create_success;
-  task_create_success  = xTaskCreate(spi_transmitter,
-                                     (signed portCHAR *)"SPI_TEST_TX",
-                                     configMINIMAL_STACK_SIZE,
-                                     NULL,
-                                     tskIDLE_PRIORITY,
-                                     NULL);
-  task_create_success |= xTaskCreate(spi_receiver,
-                                     (signed portCHAR *)"SPI_TEST_RX",
-                                     configMINIMAL_STACK_SIZE,
-                                     NULL,
-                                     tskIDLE_PRIORITY,
-                                     NULL);
-
-  /* Make sure everything is constructed succesfully.
-     The return value signals the outcome. */
-  if (!task_create_success)
-  {
-    return FALSE;
-  }
-  else
-  {
-    return TRUE;
-  }
+  return TRUE;
 }

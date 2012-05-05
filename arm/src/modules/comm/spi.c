@@ -21,7 +21,6 @@
 
 /* This modules header */
 #include "spi.h"
-#include "comm/uart.h"
 
 /**
  * @file spi.c
@@ -482,9 +481,6 @@ void spi_config_hw(void)
   functions from within it.
   Remember: Higher value => lower priority. */
   IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + ( 1 << 5 ));
-
-  /* LOOPBACK */
-  SSI0_CR1_R |= SSI_CR1_LBM;
 
   SSIEnable(SSI0_BASE);
 }

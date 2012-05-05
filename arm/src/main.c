@@ -21,9 +21,12 @@
 #include "comm/uart_protocol.h"
 #include "comm/uart_echo.h"
 #include "misc/status_led.h"
-#include "test/comm/spi_test.h"
 
-static void hardware_setup(void);
+#ifdef DEBUG
+#include "test/comm/spi_test.h"
+#endif
+
+void hardware_setup(void);
 
 int main(void)
 {
@@ -37,8 +40,11 @@ int main(void)
       uart_init_task() &&
       uart_protocol_init_task() &&
       status_led_task_init() &&
-      uart_echo_init() &&
-      spi_via_uart_init())
+      uart_echo_init()
+      #ifdef DEBUG
+      && spi_test_init()
+      #endif
+      )
   {
     IntMasterEnable();
     vTaskStartScheduler();
