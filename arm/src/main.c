@@ -24,7 +24,8 @@
 
 #ifdef DEBUG
 #include "test/comm/spi_test.h"
-#endif
+#include "test/sys/runtimestats.h"
+#endif /* DEBUG */
 
 void hardware_setup(void);
 
@@ -43,7 +44,8 @@ int main(void)
       uart_echo_init()
       #ifdef DEBUG
       && spi_test_init()
-      #endif
+      && runtimestats_init()
+      #endif /* DEBUG */
       )
   {
     IntMasterEnable();
@@ -52,9 +54,10 @@ int main(void)
 
   while(1)
   {
-    /* Will only get here if there was insufficient
-       memory to create the idle task. */
+    /* Will only get here if initialization went wrong. */
   }
+
+  return 1;
 }
 
 void hardware_setup(void)
@@ -62,8 +65,10 @@ void hardware_setup(void)
   /* Drive at 50MHz crystal clock */
   SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_8MHZ);
   SysCtlDelay(3);
-
   spi_config_hw();
   uart_init_hw();
   status_led_init_hw();
+  #ifdef DEBUG
+  timer0_config_hw();
+  #endif /* DEBUG */
 }

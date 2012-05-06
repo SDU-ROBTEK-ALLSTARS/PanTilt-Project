@@ -30,14 +30,11 @@ void portClose(void);
 int sendPacket(xUartPacket *pPacket);
 int echoTest(void);
 int setTime(void);
-void setFuelMenu(void);
-int setFuelPrice(char type, int price);
-void printReport(void);
 void listen(void);
-void listenALittle(void);
-void sendCustomPacket(void);
+void listenALittle(unsigned int seconds);
 void tester();
 int longEchoTest(int num_packets);
+void requestRuntimeStats(void);
 
 static const char *deviceName = "/dev/ttyUSB1";
 static int portId;
@@ -61,11 +58,8 @@ int main()
     while (run == true)
     {
       printf("\nSelect option:\n");
-      printf(" 1)\tSet time\n");
-      printf(" 2)\tSet fuel price(s)\n");
-      printf(" 3)\tGet full sales report\n");
+      printf(" 1)\tPrint run-time stats\n");
       printf(" 4)\tListen!\n");
-      printf(" 5)\tSend \"custom\" packet\n");
       printf(" 6)\tTest\n");
       printf(" 7)\tLong echo test\n");
       printf(" 0)\tExit\n");
@@ -77,23 +71,14 @@ int main()
       switch (input)
       {
       case '1':
-        result = setTime();
-        if (result == -1)
-        {
-          printf("Error while setting time.\n");
-        }
-        else
-        {
-          printf("Time written OK!\n");
-        }
+        requestRuntimeStats();
+        listenALittle(5);
         break;
 
       case '2':
-        setFuelMenu();
         break;
 
       case '3':
-        printReport();
         break;
 
       case '4':
@@ -102,9 +87,6 @@ int main()
         break;
 
       case '5':
-        sendCustomPacket();
-        sleep(1);
-        listenALittle();
         break;
 
       case '6':
@@ -144,7 +126,16 @@ int main()
   return 0;
 }
 
+void requestRuntimeStats(void)
+{
+  xUartPacket packet;
 
+  packet.type = UART_PACKET_TYPE_GET;
+  packet.instruction = 1;
+  packet.datalength = 0;
+
+  sendPacket(&packet);
+}
 
 void tester(void)
 {
@@ -168,31 +159,6 @@ void tester(void)
   sendPacket(&packet);
 }
 
-void sendCustomPacket(void)
-{
-  xUartPacket packet;
-  int inputNumber;
-
-  printf("Enter instruction #:\n");
-  scanf("%d",&inputNumber);
-  packet.instruction = inputNumber;
-
-  printf("Enter type #:\n");
-  scanf("%d",&inputNumber);
-  packet.type = inputNumber;
-
-  packet.datalength = 2;
-
-  printf("Enter data byte #1:\n");
-  scanf("%x",&inputNumber);
-  packet.data[0] = inputNumber;
-  printf("Enter data byte #2:\n");
-  scanf("%x",&inputNumber);
-  packet.data[1] = inputNumber;
-
-  sendPacket(&packet);
-}
-
 void listen(void)
 {
   char readBuf[256];
@@ -213,12 +179,12 @@ void listen(void)
   }
 }
 
-void listenALittle(void)
+void listenALittle(unsigned int seconds)
 {
   char readBuf[256];
   int result, i, j;
 
-  for (j=0; j<5; j++)
+  for (j=0; j<seconds; j++)
   {
     result = read(portId, readBuf, 255);
     if (result != -1)
@@ -231,130 +197,6 @@ void listenALittle(void)
     fflush(stdout);
     sleep(1);
   }
-}
-
-/**
- *
- */
-void printReport(void)
-{
-  xUartPacket packet;
-  int i = 0;
-  int result = 0;
-  char readBuf[256] = {0};
-
-  packet.type = UART_PACKET_TYPE_GET;
-  packet.datalength = 0;
-
-  for (i=1; i<=4; i++)
-  {
-    packet.instruction = (int8_t) i;
-    result = sendPacket(&packet);
-    sleep(1);
-    if (result != -1)
-    {
-      result = read(portId, readBuf, 255);
-      if (result != -1)
-      {
-        for (i=0; i<result; i++)
-        {
-          printf ("%c", readBuf[i]);
-        }
-      }
-      else
-      {
-        printf("Error reading report.");
-      }
-      usleep(100000);
-    }
-    else
-    {
-      printf("Error sending GETs report.");
-    }
-  }
-}
-
-/**
- *
- */
-void setFuelMenu(void)
-{
-  bool run = true;
-  char input;
-  int price;
-  int result;
-
-  while (run == true)
-  {
-    printf("Which fuel type?\n");
-    printf(" 1)\t92 octan\n");
-    printf(" 2)\t95 octan\n");
-    printf(" 3)\tE10\n");
-    printf(" 0)\tBack\n");
-
-    /* Get input char from stdin (ignore newline) */
-    while ((input = fgetc(stdin)) == '\n') {}
-
-    /* Decide action from input */
-    switch (input)
-    {
-    case '1':
-    case '2':
-    case '3':
-      printf("Enter price:\n");
-      scanf("%d",&price);
-      result = setFuelPrice(input, price);
-      if (result == -1)
-      {
-        printf("Error while setting fuel price.\n");
-      }
-      else
-      {
-        printf("Fuel price written OK!\n");
-      }
-      /* Go to case '0' */
-    case '0':
-      run = false;
-    default:
-      break;
-    }
-  }
-}
-
-int setFuelPrice(char type, int price)
-{
-  xUartPacket packet;
-  int result = -1;
-
-  packet.type = UART_PACKET_TYPE_SET;
-  packet.instruction = 0;
-  packet.datalength = 1;
-  packet.data[0] = (int8_t) price;
-
-  switch (type)
-  {
-  case '1':
-    /* 92 */
-    packet.instruction = 1;
-    break;
-  case '2':
-    /* 95 */
-    packet.instruction = 2;
-    break;
-  case '3':
-    /* E10 */
-    packet.instruction = 3;
-    break;
-  default:
-    break;
-  }
-
-  if (packet.instruction != 0)
-  {
-    result = sendPacket(&packet);
-  }
-
-  return result;
 }
 
 /**

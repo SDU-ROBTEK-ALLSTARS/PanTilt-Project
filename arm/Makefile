@@ -9,13 +9,14 @@ OBJCOPY = arm-none-eabi-objcopy
 SIZE = arm-none-eabi-size
 
 # Linker script (memory placement)
-LDSCRIPT = lm3s6569.ld
+LDSCRIPT = standalone.ld
 
 # "Top level" directories
 SRC_DIR = src
 LIB_DIR = lib
 RTOS_SOURCE_DIR = $(SRC_DIR)/freertos/Source
 MODULES_DIR = $(SRC_DIR)/modules
+TEST_DIR = $(SRC_DIR)/test
 EMPCOURSE_DIR = $(SRC_DIR)/empcourse
 STELLARISWARE_DIR = $(LIB_DIR)/StellarisWare
 
@@ -33,13 +34,15 @@ INCLUDE_DIRS =\
 SOURCE =\
 	$(SRC_DIR)/startup.c \
 	$(SRC_DIR)/main.c \
+	$(SRC_DIR)/syscalls.c \
 	$(MODULES_DIR)/comm/spi.c \
 	$(MODULES_DIR)/comm/uart.c \
 	$(MODULES_DIR)/comm/uart_protocol.c \
 	$(MODULES_DIR)/comm/uart_echo.c \
-	src/test/comm/spi_test.c \
 	$(MODULES_DIR)/debug/debug.c \
 	$(MODULES_DIR)/misc/status_led.c \
+	$(TEST_DIR)/comm/spi_test.c \
+	$(TEST_DIR)/sys/runtimestats.c \
 	$(RTOS_SOURCE_DIR)/list.c \
 	$(RTOS_SOURCE_DIR)/queue.c \
 	$(RTOS_SOURCE_DIR)/tasks.c \
