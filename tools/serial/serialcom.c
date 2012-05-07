@@ -30,21 +30,33 @@ void portClose(void);
 int sendPacket(xUartPacket *pPacket);
 int echoTest(void);
 int setTime(void);
-void listen(void);
-void listenALittle(unsigned int seconds);
-void tester();
+void listen(unsigned int seconds);
+void triggerSPITest();
 int longEchoTest(int num_packets);
 void requestRuntimeStats(void);
 
-static const char *deviceName = "/dev/ttyUSB1";
+static const char *deviceName;
 static int portId;
 static struct termios origOptions;
 
-int main()
+int main(int argc, char *argv[])
 {
   char input;
   bool run = true;
   int result;
+
+  if( argc == 2 )
+  {
+    deviceName = argv[1];
+  }
+  else if( argc > 2 )
+  {
+    printf("Too many arguments supplied.\n");
+  }
+  else
+  {
+    printf("One argument expected (device name).\n");
+  }
 
   signal(SIGINT, sigIntHandler);
 
@@ -60,7 +72,7 @@ int main()
       printf("\nSelect option:\n");
       printf(" 1)\tPrint run-time stats\n");
       printf(" 4)\tListen!\n");
-      printf(" 6)\tTest\n");
+      printf(" 6)\tRun SPI test\n");
       printf(" 7)\tLong echo test\n");
       printf(" 0)\tExit\n");
 
@@ -72,7 +84,7 @@ int main()
       {
       case '1':
         requestRuntimeStats();
-        listenALittle(5);
+        listen(3);
         break;
 
       case '2':
@@ -83,15 +95,15 @@ int main()
 
       case '4':
         printf("OK! Listening...\n");
-        listen();
+        listen(10);
         break;
 
       case '5':
         break;
 
       case '6':
-        tester();
-        listen();
+        triggerSPITest();
+        listen(4);
         break;
 
       case '7':
@@ -137,49 +149,17 @@ void requestRuntimeStats(void)
   sendPacket(&packet);
 }
 
-void tester(void)
+void triggerSPITest(void)
 {
   xUartPacket packet;
-  int i;
 
   packet.type = UART_PACKET_TYPE_SET;
-  packet.instruction = 10;
-  packet.datalength = UART_PACKET_MAX_DATA_SIZE;
-  for (i=0; i<packet.datalength; i++)
-  {
-    packet.data[i] = 'a' + i;
-  }
-  sendPacket(&packet);
-
-  sleep(2);
-
-  packet.type = UART_PACKET_TYPE_GET;
-  packet.instruction = 11;
+  packet.instruction = 1;
   packet.datalength = 0;
   sendPacket(&packet);
 }
 
-void listen(void)
-{
-  char readBuf[256];
-  int result, i;
-
-  while(1)
-  {
-    result = read(portId, readBuf, 255);
-    if (result != -1)
-    {
-      for (i=0; i<result; i++)
-      {
-        printf ("%c", readBuf[i]);
-      }
-    }
-    fflush(stdout);
-    sleep(1);
-  }
-}
-
-void listenALittle(unsigned int seconds)
+void listen(unsigned int seconds)
 {
   char readBuf[256];
   int result, i, j;

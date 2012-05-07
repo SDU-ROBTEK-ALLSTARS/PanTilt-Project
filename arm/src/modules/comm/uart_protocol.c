@@ -30,7 +30,7 @@
  * Array of pointers to the functions that are to be executed when
  * a given command is received. Initializes to NULL.
  */
-static void (*command[UART_PACKET_MAX_TYPE][UART_PACKET_MAX_INSTRUCTION])() = {{NULL},{NULL}};
+static void (*command[UART_PACKET_MAX_TYPE][UART_PACKET_MAX_INSTRUCTION])(uart_packet_t *) = {{NULL},{NULL}};
 
 /**
  * uart incoming queue (extern in uart.c)
@@ -41,7 +41,7 @@ xQueueHandle uart_queue_in;
  * Registers a function pointer in the array if the spot is not
  * already taken.
  */
-BOOLEAN uart_protocol_register_handler(void (*func_ptr)(), INT8U type, INT8U instruction)
+BOOLEAN uart_protocol_register_handler(void (*func_ptr)(uart_packet_t *), INT8U type, INT8U instruction)
 {
   if ((command[type][instruction] == NULL) && (type < UART_PACKET_MAX_TYPE) && (instruction < UART_PACKET_MAX_INSTRUCTION))
   {

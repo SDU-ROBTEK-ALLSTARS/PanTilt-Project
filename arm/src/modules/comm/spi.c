@@ -5,11 +5,9 @@
 #include "semphr.h"
 
 /* StellarisWare drivers */
-#include "inc/lm3s6965.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
-#include "driverlib/debug.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/gpio.h"
@@ -25,7 +23,7 @@
 /**
  * @file spi.c
  *
- * Using the FreeRTOS pvPortMalloc (heap2.c) to avoid the libc malloc() for now
+ * Using the FreeRTOS pvPortMalloc (heap2.c) to dynamically allocate queues
  *
  * Relies heavily on the fact that the MCU running this code is the master of
  * the SPI!
@@ -58,6 +56,7 @@ struct queue_list_t
   struct queue_list_item_t *head;
   struct queue_list_item_t *tail;
   INT32U num_items;
+  xSemaphoreHandle mutex;
 };
 
 /* List to store which queues are associated with which tasks,
@@ -73,6 +72,7 @@ void queue_list_initialize(struct queue_list_t *p_list)
   p_list->head = NULL;
   p_list->tail = NULL;
   p_list->num_items = 0;
+  p_list->mutex = xSemaphoreCreateMutex();
 }
 
 /**
@@ -80,23 +80,28 @@ void queue_list_initialize(struct queue_list_t *p_list)
  */
 void queue_list_item_insert_end(struct queue_list_t *p_list, struct queue_list_item_t *p_item)
 {
-  if (p_list->head == NULL)
+  if (xSemaphoreTake(p_list->mutex, portMAX_DELAY) == pdTRUE)
   {
-    /* List is empty: This becomes first and last item in it */
-    p_item->next = NULL;
-    p_item->prev = NULL;
-    p_list->head = p_item;
-    p_list->tail = p_list->head;
+    if (p_list->head == NULL)
+    {
+      /* List is empty: This becomes first and last item in it */
+      p_item->next = NULL;
+      p_item->prev = NULL;
+      p_list->head = p_item;
+      p_list->tail = p_list->head;
+    }
+    else
+    {
+      /* List is not empty, insert in back */
+      p_item->next = NULL;
+      p_item->prev = p_list->tail;
+      p_list->tail->next = p_item;
+      p_list->tail = p_item;
+    }
+    p_list->num_items++;
+
+    xSemaphoreGive(p_list->mutex);
   }
-  else
-  {
-    /* List is not empty, insert in back */
-    p_item->next = NULL;
-    p_item->prev = p_list->tail;
-    p_list->tail->next = p_item;
-    p_list->tail = p_item;
-  }
-  p_list->num_items++;
 }
 
 /**
@@ -104,24 +109,28 @@ void queue_list_item_insert_end(struct queue_list_t *p_list, struct queue_list_i
  */
 void queue_list_item_remove(struct queue_list_t *p_list, struct queue_list_item_t *p_item)
 {
-  if (p_list->head != NULL && p_item != NULL)
+  if (xSemaphoreTake(p_list->mutex, portMAX_DELAY) == pdTRUE)
   {
-    if (p_item == p_list->head)
+    if (p_list->head != NULL && p_item != NULL)
     {
-      p_list->head = p_item->next;
-      p_list->head->prev = NULL;
+      if (p_item == p_list->head)
+      {
+        p_list->head = p_item->next;
+        p_list->head->prev = NULL;
+      }
+      else if (p_item == p_list->tail)
+      {
+        p_list->tail = p_item->prev;
+        p_list->tail->next = NULL;
+      }
+      else
+      {
+        p_item->prev->next = p_item->next;
+        p_item->next->prev = p_item->prev;
+      }
+      p_list->num_items--;
     }
-    else if (p_item == p_list->tail)
-    {
-      p_list->tail = p_item->prev;
-      p_list->tail->next = NULL;
-    }
-    else
-    {
-      p_item->prev->next = p_item->next;
-      p_item->next->prev = p_item->prev;
-    }
-    p_list->num_items--;
+    xSemaphoreGive(p_list->mutex);
   }
 }
 
@@ -129,25 +138,29 @@ void queue_list_item_remove(struct queue_list_t *p_list, struct queue_list_item_
  * @internal
  */
 struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list,
-                                               xTaskHandle owner_task_target)
+    xTaskHandle owner_task_target)
 {
   struct queue_list_item_t *current_item = NULL;
 
-  if (p_list->head != NULL)
+  if (xSemaphoreTake(p_list->mutex, portMAX_DELAY) == pdTRUE)
   {
-    current_item = p_list->head;
-
-    while (current_item != NULL)
+    if (p_list->head != NULL)
     {
-      if (current_item->owner_task == owner_task_target)
+      current_item = p_list->head;
+
+      while (current_item != NULL)
       {
-        break;
-      }
-      else
-      {
-        current_item = current_item->next;
+        if (current_item->owner_task == owner_task_target)
+        {
+          break;
+        }
+        else
+        {
+          current_item = current_item->next;
+        }
       }
     }
+    xSemaphoreGive(p_list->mutex);
   }
 
   /* Dont return HEAD if its not the right one */
@@ -194,7 +207,7 @@ INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_t
   INT32U result;
   xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
   struct queue_list_item_t *calling_task_list_item =
-                          queue_list_item_find(&list_registered_tasks, current_task_handle);
+    queue_list_item_find(&list_registered_tasks, current_task_handle);
 
   /* If the calling task is un-registered, make a list item (containing I/O queues)
   for it */
@@ -251,7 +264,7 @@ INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block
   INT32U result;
   xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
   struct queue_list_item_t *calling_task_list_item =
-                           queue_list_item_find(&list_registered_tasks, current_task_handle);
+    queue_list_item_find(&list_registered_tasks, current_task_handle);
 
   /* If the calling task is un-registered, make a list item (containing I/O queues)
   for it */
@@ -294,6 +307,50 @@ INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block
   return result;
 }
 
+//BOOLEAN spi_register_task(xTaskHandle task_handle)
+//{
+//  xTaskHandle task_handle_to_register;
+//
+//  /* If NULL is passed, the calling tasks task-handle is registered */
+//  if (task_handle == NULL)
+//  {
+//    task_handle_to_register = xTaskGetCurrentTaskHandle();
+//  }
+//  else
+//  {
+//    task_handle_to_register = task_handle;
+//  }
+//
+//
+//
+//
+//
+//
+//  struct queue_list_item_t *calling_task_list_item =
+//                           queue_list_item_find(&list_registered_tasks, current_task_handle);
+//
+//  /* If the calling task is un-registered, make a list item (containing I/O queues)
+//  for it */
+//  if (calling_task_list_item == NULL)
+//  {
+//    struct queue_list_item_t *new_caller_list_item;
+//    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+//
+//    if (new_caller_list_item != NULL)
+//    {
+//      new_caller_list_item->owner_task = current_task_handle;
+//      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+//      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
+//      new_caller_list_item->num_waiting_to_receive = 0;
+//
+//      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+//
+//      calling_task_list_item = new_caller_list_item;
+//    }
+//  }
+//
+//}
+
 /**
  * SPI transmit task (using FreeRTOS)
  *
@@ -325,11 +382,11 @@ void task_spi_transmit(void *params)
         {
           xQueueReceive(current_item->queue_out, &message, portMAX_DELAY);
           SSIDataPut(SSI0_BASE, (unsigned long) message);
-          /* FOR DEBUG / "FAKE" LOOPBACK: xQueueSendToBack(intern_queue_in, &message, portMAX_DELAY); */
+          //xQueueSendToBack(intern_queue_in, &message, portMAX_DELAY);/* FOR DEBUG "FAKE" LOOPBACK:  */
           num_messages_sent++;
         }
 
-        if (num_messages_sent != 0)
+        if (num_messages_sent > 0)
         {
           current_item->num_waiting_to_receive = num_messages_sent;
           xQueueSendToBack(intern_queue_waiting_to_receive, &current_item, portMAX_DELAY);
@@ -383,26 +440,19 @@ void task_spi_receive(void *params)
  *
  * @param None
  *
- * The SPI interrupt service routine handles both receive and transmit
- * interrupts. Reception gets higher priority. The receive interrupts
- * are enabled when spi_task_init is called. The transmit interrupt is,
- * on the other hand, only enabled by spi_task_transmit provided there
- * is data waiting to be sent. It is important that ONLY spi_task_transmit
- * and spi_int_handler toggles the transmit interrupt.
  *
  * @return None
  */
 void spi_int_handler(void)
 {
-  spi_message_t message;
+  unsigned long message;
   portBASE_TYPE higher_prio_task_woken = FALSE;
-
 
   SSIIntClear(SSI0_BASE, SSI_RXTO); //SSI_ICR_RTIC
 
-  if (SSIDataGetNonBlocking(SSI0_BASE, (unsigned long *) &message) == 1)
+  if (SSIDataGetNonBlocking(SSI0_BASE, &message) == 1)
   {
-    xQueueSendToBackFromISR(intern_queue_in, &message, &higher_prio_task_woken); //pdPASS
+    xQueueSendToBackFromISR(intern_queue_in, (spi_message_t *) &message, &higher_prio_task_woken); //pdPASS
   }
 
   portEND_SWITCHING_ISR(higher_prio_task_woken);
@@ -461,6 +511,8 @@ BOOLEAN spi_init(void)
  */
 void spi_config_hw(void)
 {
+  //SSIDisable(SSI0_BASE);
+
   SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
   SysCtlDelay(3);
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -480,7 +532,7 @@ void spi_config_hw(void)
   configMAX_SYSCALL_INTERRUPT_PRIORITY so that we can still use FreeRTOS API
   functions from within it.
   Remember: Higher value => lower priority. */
-  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + ( 1 << 5 ));
+  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + (unsigned char) (1 << 5));
 
   SSIEnable(SSI0_BASE);
 }

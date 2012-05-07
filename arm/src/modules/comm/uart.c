@@ -163,7 +163,7 @@ void uart_init_hw(void)
   configMAX_SYSCALL_INTERRUPT_PRIORITY so that we can still use FreeRTOS API
   functions from within it.
   Remember: Higher value => lower priority. */
-  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + ( 1 << 5 ));
+  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + (unsigned char) (2 << 5));
 
   /* Enable the UART */
   UARTEnable(UART0_BASE);
