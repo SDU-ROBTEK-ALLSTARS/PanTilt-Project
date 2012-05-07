@@ -6,8 +6,8 @@
 #include "semphr.h"
 
 /* EMP course headers */
-#include "inc/glob_def.h"
-#include "inc/emp_type.h"
+#include "glob_def.h"
+#include "emp_type.h"
 
 /* Modules */
 #include "comm/uart.h"

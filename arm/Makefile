@@ -17,14 +17,14 @@ LIB_DIR = lib
 RTOS_SOURCE_DIR = $(SRC_DIR)/freertos/Source
 MODULES_DIR = $(SRC_DIR)/modules
 TEST_DIR = $(SRC_DIR)/test
-EMPCOURSE_DIR = $(SRC_DIR)/empcourse
+GLOBAL_DIR = $(SRC_DIR)/global
 STELLARISWARE_DIR = $(LIB_DIR)/StellarisWare
 
 # Directories that the compiler should look for #includes in
 INCLUDE_DIRS =\
 	-I . \
 	-I $(SRC_DIR) \
-	-I $(EMPCOURSE_DIR) \
+	-I $(GLOBAL_DIR) \
 	-I $(MODULES_DIR) \
 	-I $(STELLARISWARE_DIR) \
 	-I $(RTOS_SOURCE_DIR)/include \
@@ -40,7 +40,17 @@ SOURCE =\
 	$(MODULES_DIR)/comm/uart_protocol.c \
 	$(MODULES_DIR)/comm/uart_echo.c \
 	$(MODULES_DIR)/debug/debug.c \
-	$(MODULES_DIR)/misc/status_led.c \
+	$(MODULES_DIR)/adc/adc.c \
+	$(MODULES_DIR)/control/control.c \
+	$(MODULES_DIR)/dreh/dreh.c \
+	$(MODULES_DIR)/itc/itc.c \
+	$(MODULES_DIR)/lcd16x2/lcd.c \
+	$(MODULES_DIR)/lcd16x2/lcd_port.c \
+	$(MODULES_DIR)/leds/leds.c \
+	$(MODULES_DIR)/leds/status_led.c \
+	$(MODULES_DIR)/menu/menu.c \
+	$(MODULES_DIR)/menu/menu_setup.c \
+	$(MODULES_DIR)/numpad/numpad.c \
 	$(TEST_DIR)/comm/spi_test.c \
 	$(TEST_DIR)/sys/runtimestats.c \
 	$(RTOS_SOURCE_DIR)/list.c \

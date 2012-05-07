@@ -17,8 +17,8 @@
 #include "driverlib/timer.h"
 
 /* EMP course standard headers */
-#include "inc/glob_def.h"
-#include "inc/emp_type.h"
+#include "glob_def.h"
+#include "emp_type.h"
 
 /* Module includes */
 #include "comm/uart.h"

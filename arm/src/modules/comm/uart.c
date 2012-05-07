@@ -15,8 +15,8 @@
 #include "driverlib/uart.h"
 
 /* EMP course headers */
-#include "inc/glob_def.h"
-#include "inc/emp_type.h"
+#include "glob_def.h"
+#include "emp_type.h"
 
 /* This modules header */
 #include "uart.h"

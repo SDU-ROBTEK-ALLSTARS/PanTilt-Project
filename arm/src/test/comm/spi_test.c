@@ -13,8 +13,8 @@
 #include "driverlib/sysctl.h"
 
 /* EMP course standard headers */
-#include "inc/glob_def.h"
-#include "inc/emp_type.h"
+#include "glob_def.h"
+#include "emp_type.h"
 
 /* Module includes */
 #include "comm/spi.h"
