@@ -27,6 +27,7 @@ A UART packet consists of a header, which is 4 bytes long, and data. The packet 
 A protocol handler is a function that takes a `uart_packet_t *` as argument and returns `void`. The function gets executed by the protocol what the correct packet is received.
 
 If we wanted a function to add data byte 0 and 1 together, when the packet `{UART_PACKET_TYPE_SET, 13, 0, {data[0],data[1]}}` was recieved, we would do it like this:
+
 	void add_data(uart_packet_t *p_packet)
 	{
 		int result = p_packet->data[0] + p_packet->data[1];
