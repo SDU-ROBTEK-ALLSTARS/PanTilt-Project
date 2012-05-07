@@ -21,6 +21,7 @@
 #include "comm/uart.h"
 #include "comm/uart_protocol.h"
 #include "comm/uart_echo.h"
+#include "comm/uart_to_spi.h"
 #include "itc/itc.h"
 #include "leds/leds.h"
 #include "leds/status_led.h"
@@ -70,7 +71,8 @@ int main(void)
       (xTaskCreate( menu_task, 	 NAME("Menu"), 	 LARGE_STACK,   NULL, PRIORITY_LOW,   &task_handles[MENU_T]    )) == pdPASS &&
       (xTaskCreate( numpad_task, 	 NAME("Numpad"), DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[NUMPAD_T]  )) == pdPASS &&
       (xTaskCreate( control_task,	 NAME("Control"),DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T] )) == pdPASS &&
-      (xTaskCreate( blink_task,  	 NAME("Blink"),  DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T]   )) == pdPASS
+      (xTaskCreate( blink_task,  	 NAME("Blink"),  DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T]   )) == pdPASS &&
+      uart_to_spi_init()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()

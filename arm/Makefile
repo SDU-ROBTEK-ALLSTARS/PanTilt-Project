@@ -39,6 +39,7 @@ SOURCE =\
 	$(MODULES_DIR)/comm/uart.c \
 	$(MODULES_DIR)/comm/uart_protocol.c \
 	$(MODULES_DIR)/comm/uart_echo.c \
+	$(MODULES_DIR)/comm/uart_to_spi.c \
 	$(MODULES_DIR)/debug/debug.c \
 	$(MODULES_DIR)/adc/adc.c \
 	$(MODULES_DIR)/control/control.c \
