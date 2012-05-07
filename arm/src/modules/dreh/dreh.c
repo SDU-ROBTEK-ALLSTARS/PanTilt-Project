@@ -8,13 +8,15 @@
  ****************************************************************************/
 
 /***************************** Include files *******************************/
+#include "inc/hw_types.h"
+#include "driverlib/sysctl.h"
 #include "dreh.h"
 
 /***********************   Function implementations   **********************/
 void dreh_task(void *pvParameters)
 {
 	INT8U old_A = 0;
-	INT8U old_B = 0;
+	/* INT8U old_B = 0; KIM fixes "warning: variable 'old_B' set but not used [-Wunused-but-set-variable]" */
 	INT8U new_A = 0;
 	INT8U new_B = 0;
 	INT8U button = IDLE;
@@ -80,7 +82,7 @@ void dreh_task(void *pvParameters)
 				}
 		}
 		old_A = new_A;
-		old_B = new_B;
+		/* old_B = new_B; KIM fixes "warning: variable 'old_B' set but not used [-Wunused-but-set-variable]" */
 
 		YIELD(YIELD_TIME_DREH_T)
 	}
@@ -88,19 +90,16 @@ void dreh_task(void *pvParameters)
 
 void init_dreh(void)
 {
-	INT8U	dummy;
-
 	SYSCTL_RCGC2_R    |= SYSCTL_RCGC2_GPIOB | SYSCTL_RCGC2_GPIOC;
 
-	dummy = SYSCTL_RCGC2_R;
+  SysCtlDelay(3);
+
 	GPIO_PORTB_DIR_R  &= ~B1;
 	GPIO_PORTC_DIR_R  &= ~(B5 | B4);
 
-	dummy = SYSCTL_RCGC2_R;
 	GPIO_PORTB_DEN_R  |= B1;
 	GPIO_PORTC_DEN_R  |= (B5 | B4);
 
-	dummy = SYSCTL_RCGC2_R;
 	GPIO_PORTC_PUR_R  |= B5;
 }
 

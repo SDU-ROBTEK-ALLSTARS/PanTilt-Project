@@ -26,7 +26,6 @@
 #include "inc/lm3s6965.h"
 
 /*****************************    Macros    ********************************/
-#define 	DUMMY_READ  	(dummy = SYSCTL_RCGC2_R)
 #define 	ADC_CHANNEL 	0x01
 
 /************************   Function declarations   *************************/

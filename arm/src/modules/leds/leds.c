@@ -7,8 +7,9 @@
  *****************************************************************************/
 
 /***************************** Include files *******************************/
+#include "inc/hw_types.h"
+#include "driverlib/sysctl.h"
 #include "leds.h"
-
 
 /*****************************    Defines    *******************************/
 #define	PD6					6 // bit number
@@ -27,27 +28,28 @@
 
 void init_leds(void)
 {
-	INT8S dummy;
-		
+
 	// Enable the GPIO port that is used for the EMP-board LEDS.
 	SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOG;
-	// Do a dummy read to insert a few cycles after enabling the peripheral.
-	dummy = SYSCTL_RCGC2_R;
+
+	SysCtlDelay(3);
+
 	// Enable the GPIO port that is used for the EMP-board LEDS.
 	SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOD;
-	// Do a dummy read to insert a few cycles after enabling the peripheral.
-	dummy = SYSCTL_RCGC2_R;
-	// Set the direction as output (PD6).  
+
+	SysCtlDelay(3);
+
+	// Set the direction as output (PD6).
 	GPIO_PORTD_DIR_R |= 0x40;
 	// Enable the GPIO pins for digital function (PD6).
 	GPIO_PORTD_DEN_R |= 0x40;
-	// Set output to default value. 
+	// Set output to default value.
 	GPIO_PORTD_DATA_R &= ~(0x40);
-	// Set the direction as output (PG0 and PG1).  
+	// Set the direction as output (PG0 and PG1).
 	GPIO_PORTG_DIR_R |= 0x03;
 	// Enable the GPIO pins for digital function (PG0 and PG1).
 	GPIO_PORTG_DEN_R |= 0x03;
-	// Set output to default value. 
+	// Set output to default value.
 	GPIO_PORTG_DATA_R &= ~(0x03);
 }
 

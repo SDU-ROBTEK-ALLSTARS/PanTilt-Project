@@ -6,6 +6,8 @@
  *****************************************************************************/
 
 /***************************** Include files *******************************/
+#include "inc/hw_types.h"
+#include "driverlib/sysctl.h"
 #include "numpad.h"
 
 /*****************************    Defines    *******************************/
@@ -112,12 +114,10 @@ void numpad_task(void *pvParameters)
 
 void key_port_init(void)
 {
-	INT32U dummy;
 	// Enable the GPIO ports that is used for Matrix Keypad.
 	SYSCTL_RCGC2_R |= ( SYSCTL_RCGC2_GPIOB | SYSCTL_RCGC2_GPIOD );
 
-	// Do a dummy read to insert a few cycles after enabling the peripheral.
-	dummy = SYSCTL_RCGC2_R;
+	SysCtlDelay(3);
 
 	// Set the direction as input.
 	GPIO_PORTD_DIR_R &= ~( PD2 | PD3 | PD4 | PD5 );

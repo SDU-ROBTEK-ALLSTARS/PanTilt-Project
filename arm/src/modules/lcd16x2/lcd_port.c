@@ -11,7 +11,11 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 
+/* Stellaris driverlib */
+#include "inc/hw_types.h"
 #include "inc/lm3s6965.h"
+#include "driverlib/sysctl.h"
+
 #include "emp_type.h"
 #include "lcd_port.h"
 
@@ -46,29 +50,12 @@ void lcd_strobe(void)
 	// LCD_E pin, Tcycle, min = 550nS, Tw, min = 220ns
 	GPIO_PORTB_DATA_R |= (1 << LCD_E);
 	// 50 Mhz, Tw, min 220ns => 11 nops
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
+
+	SysCtlDelay(3);
+
 	GPIO_PORTB_DATA_R &= ~(1 << LCD_E);
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
-	__asm("nop");
+
+	SysCtlDelay(3);
 }
 
 void lcd_write_port(INT8U value)
@@ -89,8 +76,6 @@ void lcd_write_4bit_mode(INT8U c)
 
 void lcd_port_setup(void)
 {
-		INT8S dummy;
-
 		// LCD_RS PA7
 		// LCD_RW PA6
 		// LCD_E  PB6 // Strobe
@@ -98,8 +83,9 @@ void lcd_port_setup(void)
 
 		// Enable the GPIO port that is used for LCD_RW.
 	  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA;
-	  // Do a dummy read to insert a few cycles after enabling the peripheral.
-	  dummy = SYSCTL_RCGC2_R;
+
+	  SysCtlDelay(3);
+
 	  // Set the direction as output.
 	  GPIO_PORTA_DIR_R |= (1 << LCD_RW);
 	  // Enable the GPIO pins for digital function.
@@ -117,8 +103,8 @@ void lcd_port_setup(void)
 
 	  // Enable the GPIO port that is used for LCD_E (Strobe).
  	  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOB;
- 	  // Do a dummy read to insert a few cycles after enabling the peripheral.
- 	  dummy = SYSCTL_RCGC2_R;
+
+ 	  SysCtlDelay(3);
 
 	  // Set the direction as output.
 	  GPIO_PORTB_DIR_R |= (1 << LCD_E);
