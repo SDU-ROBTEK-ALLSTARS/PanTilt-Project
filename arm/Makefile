@@ -93,7 +93,7 @@ OBJS = $(SOURCE:.c=.o)
 # Targets
 all: debug
 
-debug: CFLAGS += -g -DDEBUG
+debug: CFLAGS += -O0 -g -DDEBUG
 debug: binary
 
 release: CFLAGS += -s -O2
