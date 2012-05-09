@@ -24,8 +24,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 -- arithmetic functions with Signed or Unsigned values
 use IEEE.NUMERIC_STD.ALL;
 
---use IEEE.STD_LOGIC_ARITH.ALL;
---use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx primitives in this code.
 --library UNISIM;
@@ -41,72 +41,86 @@ end FourXDecoderv2;
 
 
 architecture Behavioral of FourXDecoderv2 is
-
-
-	signal state : std_logic_vector(1 downto 0) := "00";
+	signal input   : std_logic_vector(1 downto 0);
+	signal state   : std_logic_vector(1 downto 0) := "00";
+	signal counter : unsigned (15 downto 0):= "1000000000000000";
+	
+	component hysteresis is
+	    Port ( input  : in  STD_LOGIC;
+              Clk    : in  STD_LOGIC;
+              output : out  STD_LOGIC);
+	end component;
 		
 begin
-	process(a,b,rst_counter,clk,state)
-		variable input : std_logic_vector(1 downto 0);
-		variable counter : std_logic_vector(19 downto 0):= "00001000000000000000";
+	hysteresis_a : hysteresis
+		port map(
+			input => a,
+			clk => clk,
+			output => input(0)
+			);
+			
+	hysteresis_b : hysteresis
+		port map(
+			input => b,
+			clk => clk,
+			output => input(1)
+			);
+
+	pos <= std_logic_vector(counter);
+	
+	process(a,b,rst_counter,clk,state,input,counter)
 	begin
 		if rising_edge(clk) then
-			input(0) := a;
-			input(1) := b;
-			counter(16) := '0';
-			counter(17) := '0';
-			counter(18) := '0';
-			counter(19) := '0';
+
 			--Position reset
 			if(rst_counter = '1') then
-				counter := "00001000000000000000";
+				counter <="1000000000000000";
 			end if; --rst_counter ='1'
 			
 			--state transition
 			case state is 
 				when "00"   => 
 					if input = "01" then 
-						counter := std_logic_vector(unsigned(counter) +1);
+						counter <= counter +1;
 						state <= "01";
 					elsif input = "10" then  
-						counter := std_logic_vector(unsigned(counter) -1);
+						counter <= counter -1;
 						state <= "10";
 					else 
 						--
 					end if;
 				when "01"   =>
 					if input = "11" then 
-						counter := std_logic_vector(unsigned(counter) +1);
+						counter <= counter +1;
 						state <= "11";
 					elsif input = "00" then 
-						counter := std_logic_vector(unsigned(counter) -1);
+						counter <= counter -1;
 						state <= "00";
 					else 
 						--
 					end if;
 				when "11"   =>
 					if input = "10" then 
-						counter := std_logic_vector(unsigned(counter) +1);
+						counter <= counter +1;
 						state <= "10";
 					elsif input = "01" then 
-						counter := std_logic_vector(unsigned(counter) -1);
+						counter <= counter -1;
 						state <= "01";
 					else 
 						--
 					end if;
 				when "10"   =>
 					if input = "00" then  
-						counter := std_logic_vector(unsigned(counter) +1);
+						counter <= counter +1;
 						state <= "00";
 					elsif input = "11" then 
-						counter := std_logic_vector(unsigned(counter) -1);
+						counter <= counter -1;
 						state <= "11";
 					else 
 						--
 					end if;
 				when others =>
 			end case;
-			pos <= counter(15 downto 0);
 		end if; --rising_edge(clk)
 	end process;
 

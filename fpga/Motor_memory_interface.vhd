@@ -45,7 +45,7 @@ entity Motor_memory_interface is
 			 --DEBUG
           Segm : out STD_LOGIC_VECTOR(6 downto 0);					
 			 An   : out STD_LOGIC_VECTOR(3 downto 0);
-			 Leds : out STD_LOGIC_VECTOR(5 downto 0));
+			 Leds : out STD_LOGIC_VECTOR(6 downto 0));
 			 
 end Motor_memory_interface;
 
@@ -168,20 +168,20 @@ begin
 --component instantiation
  Motor_A : ControlBlockTop
 	port map ( Clk => Clk,
---				  Input_number => "1111000000000000", --hardcode velocity
---				  Freerun      => '0',
+			--	  Input_number => "0111100000000000", --hardcode velocity
 				  Input_number => motor_a_input,
 				  Freerun      =>	motor_a_freerun,
+			--		Freerun => '0',
 				  Pin1			=>	in1_a,
 				  Pin2			=>	in2_a,
 				  Enable		   => en_a);
 
  Motor_B : ControlBlockTop
 	port map ( Clk => Clk,
---				  Input_number => "1111000000001000",  --hardcode velocity
---				  Freerun      => '0',
+--				  Input_number => "1111100000000000",  --hardcode velocity
 				  Input_number => motor_b_input,
 				  Freerun      =>	motor_b_freerun,
+--				  Freerun		=> '0',
 				  Pin1			=>	in1_b,
 				  Pin2			=>	in2_b,
 				  Enable		   => en_b);
@@ -192,13 +192,7 @@ begin
 					An => An,
 					Clk => Clk);
 
---decoder_a : FourXDecoder
---    Port map ( a 	=>sensor1_b	,	                --: in  STD_LOGIC;
---				   b 	=>sensor1_a	,						 --     : in  STD_LOGIC;
---		         rst_bar => '0',                     -- 	: in  STD_LOGIC;
---					clk =>clk       , 				 --: in  STD_LOGIC;
---					pos =>motor_a_decoder       --: out  signed( 15 downto 0) );
---			  );
+
 decoder_a:	FourXDecoderv2
 	 Port map ( a => sensor1_a,
 					b => sensor1_b,	
@@ -206,6 +200,7 @@ decoder_a:	FourXDecoderv2
 					clk  => clk,		
 					pos => motor_a_decoder	
 				  );
+				  
 decoder_b:	FourXDecoderv2
 	 Port map ( a => sensor2_b,
 					b => sensor2_a,	

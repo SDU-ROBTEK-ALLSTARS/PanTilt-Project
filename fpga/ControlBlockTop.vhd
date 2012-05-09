@@ -36,8 +36,6 @@ end ControlBlockTop;
 architecture Behavioral of ControlBlockTop is
 --Subcomponent declarations
 	component PWMv1 is
-		--generic ( prescaler_value : STD_LOGIC_VECTOR(15 downto 0) := (others=> '0');
-		--		    bit_reduction : integer := 0);
 		Port (
 			  Clk 			   : in   STD_LOGIC;
            duty_cycle   	: in   STD_LOGIC_VECTOR(14 downto 0);
@@ -72,7 +70,6 @@ architecture Behavioral of ControlBlockTop is
 begin
 	--Component instantiation
 	Pwm: PWMv1
-	--generic map (prescaler_value => (others=> '0'),bit_reduction =>  0 )-- Generic terms found experimentally to best fit the motor
 	port map    (duty_cycle      => duty_cycle,
 				    Output 		     => PWM_signal,
 					 Clk 				  => Clk);

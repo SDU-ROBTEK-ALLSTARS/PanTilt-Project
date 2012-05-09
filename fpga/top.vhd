@@ -43,7 +43,7 @@ entity top is
       JC : in  STD_LOGIC_VECTOR(7 DOWNTO 0);
 		Segm : out STD_LOGIC_VECTOR(6 downto 0);					
 		An   : out STD_LOGIC_VECTOR(3 downto 0);
-		Leds : out STD_LOGIC_VECTOR(5 downto 0));
+		Leds : out STD_LOGIC_VECTOR(6 downto 0));
 end top;
 
 architecture Behavioral of top is
@@ -61,7 +61,7 @@ architecture Behavioral of top is
 			 dout: in STD_LOGIC_VECTOR(7 downto 0);
 			 Segm : out STD_LOGIC_VECTOR(6 downto 0);					
 			 An   : out STD_LOGIC_VECTOR(3 downto 0);
-			 Leds : out STD_LOGIC_VECTOR(5 downto 0));
+			 Leds : out STD_LOGIC_VECTOR(6 downto 0));
  end component;
 
 
