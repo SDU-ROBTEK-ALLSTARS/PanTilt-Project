@@ -7,7 +7,11 @@ templates
 xlnx_auto*
 _xmsgs
 xst
+vs2010app
+planAhead_run_1/
 
+*.xdl
+*.wcfg
 *.bgn
 *.bit
 *.bld

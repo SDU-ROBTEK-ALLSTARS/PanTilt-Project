@@ -1,0 +1,65 @@
+NET "board_clk" LOC = "B8"; 
+
+#NET "reset_btn" LOC = "B18";
+
+#led rewrite 
+NET "buffer_collision" LOC = "R4";
+
+
+#NET "leds(7)" LOC = "R4"; # LD7
+#NET "leds(6)" LOC = "F4"; # LD6
+#NET "leds(5)" LOC = "P15"; # LD5
+#NET "leds(4)" LOC = "E17"; # LD4
+NET "leds(3)" LOC = "K14"; # LD3
+NET "leds(2)" LOC = "K15"; # LD2
+NET "leds(1)" LOC = "J15"; # LD1
+NET "leds(0)" LOC = "J14"; # LD0
+##
+#NET "switches(7)" LOC = "R17"; # SW7
+#NET "switches(6)" LOC = "N17"; # SW6
+#NET "switches(5)" LOC = "L13"; # SW5
+#NET "switches(4)" LOC = "L14"; # SW4
+#NET "switches(3)" LOC = "K17"; # SW3
+#NET "switches(2)" LOC = "K18"; # SW2
+#NET "switches(1)" LOC = "H18"; # SW1
+#NET "switches(0)" LOC = "G18"; # SW0
+
+#On the Arduino Duemilanove and other ATmega168 / 328-based boards, the SPI bus uses pins 10 (SS), 11 (MOSI), 12 (MISO), and 13 (SCK). 
+NET "spi_clk" LOC = "M13"; # JB1 - 13
+NET "spi_mosi" LOC = "R18"; # JB2 - 11
+NET "spi_miso" LOC = "R15"; # JB3 - 12
+NET "spi_ss" LOC = "T17"; # JB4 - 10
+#NET "" LOC = "P17"; # JB7
+#NET "" LOC = "R16"; # JB8
+#NET "" LOC = "T18"; # JB9
+#NET "" LOC = "U18"; # JB10
+
+#Motor pins
+NET "JA<0>" LOC = "L15"; # Bank = 1, Pin name = IO_L09N_1/A11, Type = DUAL, Sch name = JA1
+NET "JA<1>" LOC = "K12"; # Bank = 1, Pin name = IO_L11N_1/A9/RHCLK1, Type = RHCLK/DUAL, Sch name = JA2
+NET "JA<2>" LOC = "L17"; # Bank = 1, Pin name = IO_L10N_1/VREF_1, Type = VREF, Sch name = JA3
+NET "JA<3>" LOC = "M15"; # Bank = 1, Pin name = IO_L07P_1, Type = I/O, Sch name = JA4
+NET "JA<4>" LOC = "K13"; # Bank = 1, Pin name = IO_L11P_1/A10/RHCLK0, Type = RHCLK/DUAL, Sch name = JA7
+NET "JA<5>" LOC = "L16"; # Bank = 1, Pin name = IO_L09P_1/A12, Type = DUAL, Sch name = JA8
+NET "JA<6>" LOC = "M14"; # Bank = 1, Pin name = IO_L05P_1, Type = I/O, Sch name = JA9
+NET "JA<7>" LOC = "M16"; # Bank = 1, Pin name = IO_L07N_1, Type = I/O, Sch name = JA10
+
+NET "JC<0>" LOC = "G15"; # Bank = 1, Pin name = IO_L18P_1, Type = I/O, Sch name = JC1
+NET "JC<1>" LOC = "J16"; # Bank = 1, Pin name = IO_L13N_1/A5/RHCLK5, Type = RHCLK/DUAL, Sch name = JC2
+NET "JC<2>" LOC = "G13"; # Bank = 1, Pin name = IO_L20N_1, Type = I/O, Sch name = JC3
+NET "JC<3>" LOC = "H16"; # Bank = 1, Pin name = IO_L16P_1, Type = I/O, Sch name = JC4
+NET "JC<4>" LOC = "H15"; # Bank = 1, Pin name = IO_L17N_1, Type = I/O, Sch name = JC7
+NET "JC<5>" LOC = "F14"; # Bank = 1, Pin name = IO_L21N_1, Type = I/O, Sch name = JC8
+NET "JC<6>" LOC = "G16"; # Bank = 1, Pin name = IO_L18N_1, Type = I/O, Sch name = JC9
+NET "JC<7>" LOC = "J12"; # Bank = 1, Pin name = IO_L15P_1/A2, Type = DUAL, Sch name = JC10
+NET "An<0>"  	LOC = "F17"  ;
+NET "An<1>"  	LOC = "H17"  ;
+NET "An<2>"  	LOC = "C18"  ;
+NET "An<3>"  	LOC = "F15"  ;
+NET "Segm<0>"  LOC = "L18"  ;  #a - Segment
+NET "Segm<1>"  LOC = "F18"  ;  #b
+NET "Segm<2>"  LOC = "D17"  ;  #c
+NET "Segm<3>"  LOC = "D16"  ;  #d
+NET "Segm<4>"  LOC = "G14"  ;  #e
+NET "Segm<5>"  LOC = "J17"  ;  #f
+NET "Segm<6>"  LOC = "H14"  ;  #g
