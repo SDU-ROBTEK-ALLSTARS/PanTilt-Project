@@ -31,6 +31,7 @@
 #include "adc/adc.h"
 #include "menu/menu.h"
 #include "control/control.h"
+#include "itc/parameter_updater.h"
 
 #ifdef DEBUG
 #include "test/comm/spi_test.h"
@@ -72,7 +73,8 @@ int main(void)
       (xTaskCreate( numpad_task, 	 NAME("Numpad"), DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[NUMPAD_T]  )) == pdPASS &&
       (xTaskCreate( control_task,	 NAME("Control"),DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T] )) == pdPASS &&
       (xTaskCreate( blink_task,  	 NAME("Blink"),  DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T]   )) == pdPASS &&
-      uart_to_spi_init()
+      uart_to_spi_init() &&
+      par_updater_init()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()

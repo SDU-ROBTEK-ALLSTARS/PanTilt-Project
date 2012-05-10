@@ -45,6 +45,7 @@ SOURCE =\
 	$(MODULES_DIR)/control/control.c \
 	$(MODULES_DIR)/dreh/dreh.c \
 	$(MODULES_DIR)/itc/itc.c \
+	$(MODULES_DIR)/itc/parameter_updater.c \
 	$(MODULES_DIR)/lcd16x2/lcd.c \
 	$(MODULES_DIR)/lcd16x2/lcd_port.c \
 	$(MODULES_DIR)/leds/leds.c \

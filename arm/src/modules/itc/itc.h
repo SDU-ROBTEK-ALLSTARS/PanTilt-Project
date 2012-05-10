@@ -84,8 +84,14 @@ enum parameter_handles
 	PAN_CURRENT_P,
 	TILT_CURRENT_P,
 	PAN_SETPOINT_P,
-	TILT_SETPOINT_P
-
+	TILT_SETPOINT_P,
+	PAN_POSITION_P,
+	TILT_POSITION_P,
+  PAN_PWM_P,
+  TILT_PWM_P,
+  PAN_VELOCITY_P,
+  TILT_VELOCITY_P,
+  FREE_P
 };
 
 /**********************   Function declarations   **************************/
