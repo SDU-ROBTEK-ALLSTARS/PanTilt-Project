@@ -30,10 +30,11 @@ void portClose(void);
 int sendPacket(xUartPacket *pPacket);
 int echoTest(void);
 int setTime(void);
-void listen(unsigned int seconds);
-void triggerSPITest();
+void listen(unsigned int seconds, char *format);
+void triggerSPITest(int8_t num_loops);
 int longEchoTest(int num_packets);
 void requestRuntimeStats(void);
+void sendToSPI(void);
 
 static const char *deviceName;
 static int portId;
@@ -71,6 +72,7 @@ int main(int argc, char *argv[])
     {
       printf("\nSelect option:\n");
       printf(" 1)\tPrint run-time stats\n");
+      printf(" 2)\tSend to SPI\n");
       printf(" 4)\tListen!\n");
       printf(" 6)\tRun SPI test\n");
       printf(" 7)\tLong echo test\n");
@@ -84,10 +86,12 @@ int main(int argc, char *argv[])
       {
       case '1':
         requestRuntimeStats();
-        listen(3);
+        listen(3, "%c");
         break;
 
       case '2':
+        sendToSPI();
+        listen(2, "%x");
         break;
 
       case '3':
@@ -95,15 +99,15 @@ int main(int argc, char *argv[])
 
       case '4':
         printf("OK! Listening...\n");
-        listen(10);
+        listen(10, "%c");
         break;
 
       case '5':
         break;
 
       case '6':
-        triggerSPITest();
-        listen(4);
+        triggerSPITest(64);
+        listen(10, "%c");
         break;
 
       case '7':
@@ -138,6 +142,23 @@ int main(int argc, char *argv[])
   return 0;
 }
 
+void sendToSPI(void)
+{
+  xUartPacket packet;
+  unsigned int i;
+
+  packet.type = UART_PACKET_TYPE_SET;
+  packet.instruction = 2;
+  packet.datalength = 1;
+
+  /* Promt for packet data */
+  printf("Input packet data (1 byte as hex). End with <Enter>.\n");
+  scanf("%x",&i);
+  packet.data[0] = (int8_t) i;
+
+  sendPacket(&packet);
+}
+
 void requestRuntimeStats(void)
 {
   xUartPacket packet;
@@ -149,17 +170,18 @@ void requestRuntimeStats(void)
   sendPacket(&packet);
 }
 
-void triggerSPITest(void)
+void triggerSPITest(int8_t num_loops)
 {
   xUartPacket packet;
 
   packet.type = UART_PACKET_TYPE_SET;
   packet.instruction = 1;
-  packet.datalength = 0;
+  packet.datalength = 1;
+  packet.data[0] = num_loops;
   sendPacket(&packet);
 }
 
-void listen(unsigned int seconds)
+void listen(unsigned int seconds, char *format)
 {
   char readBuf[256];
   int result, i, j;
@@ -171,7 +193,7 @@ void listen(unsigned int seconds)
     {
       for (i=0; i<result; i++)
       {
-        printf ("%c", readBuf[i]);
+        printf (format, readBuf[i]);
       }
     }
     fflush(stdout);
