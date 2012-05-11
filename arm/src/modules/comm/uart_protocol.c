@@ -109,13 +109,16 @@ void uart_protocol_task(void *parameters)
         {
           for (i=0; i<packet.datalength; i++)
           {
-            xQueueReceive(uart_queue_in, &packet.data[i], (portTickType) 255);
+            /* If data is sent with the packet, it is expected to arrive a
+             * relatively short while after the header, so we don't block
+             * forever here. */
+            xQueueReceive(uart_queue_in, &packet.data[i], (portTickType)(portTICK_RATE_MS * 500));
           }
         }
 
         /* Execute the command that was received. A pointer to packet is
-        supplied as argument. The handler must decide whether to use it
-        or not. */
+         * supplied as argument. The handler must decide whether to use it
+         * or not. */
         (*command[packet.type][packet.instruction])(&packet);
       }
     }

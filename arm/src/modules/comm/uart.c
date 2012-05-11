@@ -53,13 +53,13 @@ INT32U uart_write(const INT8U *buffer, INT32U length, portTickType ticks_to_bloc
   {
     for (INT32U i=0; i<length; i++)
     {
-      if (xQueueSendToBack(uart_out.queue, &buffer[i], ticks_to_block) == errQUEUE_FULL)
+      if (xQueueSendToBack(uart_out.queue, &buffer[i], ticks_to_block) == pdTRUE)
       {
-        break;
+        bytes_written++;
       }
       else
       {
-        bytes_written++;
+        break;
       }
     }
     xSemaphoreGive(uart_out.mutex);

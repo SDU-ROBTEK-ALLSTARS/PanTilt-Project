@@ -415,7 +415,7 @@ void task_spi_receive(void *params)
   {
     xQueueReceive(intern_queue_in, &message, portMAX_DELAY);
 
-    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, (portTickType) 0xFF) == pdTRUE)
+    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, portMAX_DELAY) == pdTRUE)
     {
       xQueueSendToBack(receiver->queue_in, &message, portMAX_DELAY);
       receiver->num_waiting_to_receive--;
