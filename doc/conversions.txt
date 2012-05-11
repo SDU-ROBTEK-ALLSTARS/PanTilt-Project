@@ -1,0 +1,90 @@
+ADDRESS_DUTY_A
+16 bit signed
+0x0000 = 0
+0x8000 = +100% pwm //32768
+0x7FFF = -100% pwm //-32767
+
+PAN_PWM_P
+32 bit signed
+0 er 0% pwm
+-10000 = -100% pwm
++10000 = +100% pwm
+
+---------------------
+ADDRESS_DUTY_B 
+16 bit signed
+0x0000 = 0
+0x8000 = +100% pwm
+0x7FFF = -100% pwm
+
+TILT_PWM_P
+32 bit signed
+0 er 0% pwm
+-10000 = -100% pwm
++10000 = +100% pwm
+
+---------------------
+ADDRESS_POS_A
+16 bit unsigned
+0x8000 = @hall-sensor
+0x???? = pan max
+0x???? = pan min
+
+PAN_POS_P
+32 bit signed
+0 er pan center
++180000 er pan max
+-180000 er pan min
+
+---------------------
+ADDRESS_POS_B 
+16 bit unsigned
+0x8000 = @hall-sensor
+0x0434 = tilt max
+
+TILT_POS_P
+32 bit signed
+0 er tilt center (hall)
+359999 er tilt max (nulstilles ved hall)
+
+---------------------
+ADDRESS_VEL_A
+16 bit signed
+0x0000 = 0 rad/s
+0x???? = velocity max ? rad/s
+0x???? = velocity min ? rad/s
+
+PAN_VEL_P
+32 bit signed
+32 bit signed
+-10000 = -100.00 rad/s
+10000 = +100.00 rad/s
+
+---------------------
+ADDRESS_VEL_B
+16 bit signed
+0x0000 = 0 rad/s
+0x???? = velocity max ? rad/s
+0x???? = velocity min ? rad/s
+
+TILT_VEL_P
+32 bit signed
+-10000 = -100.00 rad/s
+10000 = +100.00 rad/s
+
+---------------------
+ADDRESS_AUX_FROM_ARM
+
+
+---------------------
+ADDRESS_AUX_TO_ARM
+0x01 = free mode pan (high is free, low is pwm active)
+0x02 = free mode tilt (high is free, low is pwm active)
+
+
+
+
+
+
+
+
