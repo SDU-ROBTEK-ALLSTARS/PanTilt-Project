@@ -53,6 +53,7 @@ SOURCE =\
 	$(MODULES_DIR)/menu/menu.c \
 	$(MODULES_DIR)/menu/menu_setup.c \
 	$(MODULES_DIR)/numpad/numpad.c \
+	$(MODULES_DIR)/utils/itoa.c \
 	$(TEST_DIR)/comm/spi_test.c \
 	$(TEST_DIR)/sys/runtimestats.c \
 	$(RTOS_SOURCE_DIR)/list.c \
