@@ -25,14 +25,14 @@ NET "leds(0)" LOC = "J14"; # LD0
 #NET "switches(0)" LOC = "G18"; # SW0
 
 #On the Arduino Duemilanove and other ATmega168 / 328-based boards, the SPI bus uses pins 10 (SS), 11 (MOSI), 12 (MISO), and 13 (SCK). 
-NET "spi_clk" LOC = "M13"; # JB1 - 13
-NET "spi_mosi" LOC = "R18"; # JB2 - 11
-NET "spi_miso" LOC = "R15"; # JB3 - 12
-NET "spi_ss" LOC = "T17"; # JB4 - 10
-#NET "" LOC = "P17"; # JB7
-#NET "" LOC = "R16"; # JB8
-#NET "" LOC = "T18"; # JB9
-#NET "" LOC = "U18"; # JB10
+#NET "" LOC = "M13"; # JB1 - U0TX
+NET "spi_ss" LOC = "R18"; # JB2 - SFSS
+NET "spi_mosi" LOC = "R15"; # JB3 - SSITX
+#NET "" LOC = "T17"; # JB4 - SDA1
+#NET "" LOC = "P17"; # JB7 - U0RX
+NET "spi_clk" LOC = "R16"; # JB8 - SSICLK
+NET "spi_miso" LOC = "T18"; # JB9 - SSIRX
+#NET "" LOC = "U18"; # JB10 - SCL1
 
 #Motor pins
 NET "JA<0>" LOC = "L15"; # Bank = 1, Pin name = IO_L09N_1/A11, Type = DUAL, Sch name = JA1

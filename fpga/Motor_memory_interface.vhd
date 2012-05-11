@@ -108,7 +108,16 @@ architecture Behavioral of Motor_memory_interface is
 	signal motor_b_input   : STD_LOGIC_VECTOR (15 downto 0);
 	signal motor_b_decoder : STD_LOGIC_VECTOR (15 downto 0);
 	signal motor_b_freerun : STD_LOGIC;
-
+	
+	signal decoder_reset_a_from_arm : STD_LOGIC;
+	signal decoder_reset_b_from_arm : STD_LOGIC;
+	signal decoder_reset_a_from_fpga: STD_LOGIC;
+	signal decoder_reset_b_from_fpga: STD_LOGIC;
+	signal decoder_reset_a          : STD_LOGIC;
+	signal decoder_reset_b 			  : STD_LOGIC;
+	signal normalized_position_a : STD_LOGIC_VECTOR(15 downto 0);
+	signal normalized_position_b : STD_LOGIC_VECTOR(15 downto 0);
+	
 --Subcomponent descriptors
 component ControlBlockTop is
 	Port (    Clk   		  : in  STD_LOGIC;
@@ -118,14 +127,6 @@ component ControlBlockTop is
 				 Pin2			  : out STD_LOGIC;
 				 Enable		  : out STD_LOGIC);
 end component;
-
---COMPONENT FourXDecoder is
---    Port ( a 	: in  STD_LOGIC;
---           b 	: in  STD_LOGIC;
---		rst_bar 	: in  STD_LOGIC;
---			  clk : in  STD_LOGIC;
---          pos : out STD_LOGIC_VECTOR( 15 downto 0) );
---end component;
 
 COMPONENT FourXDecoderv2
 	Port ( a 					: in  STD_LOGIC;
@@ -142,6 +143,21 @@ component largebinaryToBCD
 			  An            : out STD_LOGIC_VECTOR(3 downto 0));		  
 	end component;
 	
+component decoder_a_normalizer
+	Port (  value            : in  STD_LOGIC_VECTOR(15 downto 0);
+           clk              : in  STD_LOGIC;
+           index            : in  STD_LOGIC;
+			  reset_counter    : out  STD_LOGIC;
+           normalized_value : out  STD_LOGIC_VECTOR(15 downto 0));
+end component;
+
+component decoder_b_normalizer
+	Port (  value            : in  STD_LOGIC_VECTOR(15 downto 0);
+           clk              : in  STD_LOGIC;
+           index            : in  STD_LOGIC;
+			  reset_counter    : out  STD_LOGIC;
+           normalized_value : out  STD_LOGIC_VECTOR(15 downto 0));
+end component;
 --constants
 constant ADDRESS_DUTY_A_MSB			 : STD_LOGIC_VECTOR (4 downto 0) := "00010";
 constant ADDRESS_DUTY_A_LSB			 : STD_LOGIC_VECTOR (4 downto 0) := "00011";
@@ -163,55 +179,65 @@ constant ADDRESS_AUX_TO_ARM			 : STD_LOGIC_VECTOR (4 downto 0) := "01111";
 
 constant MOTOR_A_FREERUN_POS : integer := 0;
 constant MOTOR_B_FREERUN_POS : integer := 1;
+constant DECODER_A_RESET_POS : integer := 2;
+constant DECODER_B_RESET_POS : integer := 3;
 
 begin
 --component instantiation
  Motor_A : ControlBlockTop
 	port map ( Clk => Clk,
-			--	  Input_number => "0111100000000000", --hardcode velocity
 				  Input_number => motor_a_input,
 				  Freerun      =>	motor_a_freerun,
-			--		Freerun => '0',
 				  Pin1			=>	in1_a,
 				  Pin2			=>	in2_a,
 				  Enable		   => en_a);
 
  Motor_B : ControlBlockTop
 	port map ( Clk => Clk,
---				  Input_number => "1111100000000000",  --hardcode velocity
 				  Input_number => motor_b_input,
 				  Freerun      =>	motor_b_freerun,
---				  Freerun		=> '0',
 				  Pin1			=>	in1_b,
 				  Pin2			=>	in2_b,
 				  Enable		   => en_b);
-
  Segment : largebinaryToBCD 
-	PORT MAP  ( largeBinary => motor_b_decoder, 
+	PORT MAP  ( largeBinary => normalized_position_b, 
 	            Segm => Segm,
 					An => An,
 					Clk => Clk);
 
-
 decoder_a:	FourXDecoderv2
 	 Port map ( a => sensor1_a,
 					b => sensor1_b,	
-					rst_counter => '0',
+					rst_counter => decoder_reset_a,
 					clk  => clk,		
 					pos => motor_a_decoder	
 				  );
 				  
+decoder_a_normalizer_inst : decoder_a_normalizer
+	port map (  value => motor_a_decoder,
+					clk => clk,
+					index => index_1,
+					reset_counter => decoder_reset_a_from_fpga,
+					normalized_value => normalized_position_a
+				);			  
+			  
 decoder_b:	FourXDecoderv2
 	 Port map ( a => sensor2_b,
 					b => sensor2_a,	
-					rst_counter => '0',
+					rst_counter => decoder_reset_b,
 					clk  => clk,		
 					pos => motor_b_decoder	
 				  );
 
-
-
-
+decoder_b_normalizer_inst : decoder_b_normalizer
+	port map (  value => motor_b_decoder,
+					clk => clk,
+					index => index_0,
+					reset_counter => decoder_reset_b_from_fpga,
+					normalized_value => normalized_position_b
+				);
+					
+			  
 --signal routing
 	JA(0) <= in1_a;
 	JA(1) <= en_a;
@@ -226,8 +252,6 @@ decoder_b:	FourXDecoderv2
    index_0   <=JC(0);
 	sensor1_b <= JC(1); 
 	sensor2_b <= JC(2);
-	
-	
 	index_1   <= JC(4);
 	sensor1_a <= JC(5);
 	sensor2_a <= JC(6);
@@ -239,6 +263,8 @@ decoder_b:	FourXDecoderv2
 	leds(4)<= index_0;
 	leds(5)<= index_1;
 	
+	decoder_reset_b <= decoder_reset_b_from_arm or decoder_reset_b_from_fpga;
+	decoder_reset_a <= decoder_reset_a_from_arm or decoder_reset_a_from_fpga;
 --the rest :D
 --memory process here
 
@@ -250,14 +276,14 @@ decoder_b:	FourXDecoderv2
 		variable v_dout: STD_LOGIC_VECTOR(7 downto 0); --READ FROM THIS
 		variable v_motor_a_input : STD_LOGIC_VECTOR(15 downto 0);
 		variable v_motor_b_input : STD_LOGIC_VECTOR(15 downto 0);
-		variable v_motor_a_decoder : STD_LOGIC_VECTOR(15 downto 0) := "0000000000000000";
-		variable v_motor_b_decoder : STD_LOGIC_VECTOR(15 downto 0) := "0000000000000000";
+		variable v_motor_a_pos : STD_LOGIC_VECTOR(15 downto 0) := "0000000000000000";
+		variable v_motor_b_pos : STD_LOGIC_VECTOR(15 downto 0) := "0000000000000000";
 		variable v_aux				   : STD_LOGIC_VECTOR(7 downto 0);
 	begin
 		if rising_edge(Clk) then
 		v_dout := dout; --Read input
-		v_motor_a_decoder := motor_a_decoder;
-		v_motor_b_decoder := motor_b_decoder;
+		v_motor_a_pos := normalized_position_a;
+		v_motor_b_pos := normalized_position_b;
 			case state is
 			
 -----------------------PWM-----------------------------------
@@ -312,7 +338,7 @@ decoder_b:	FourXDecoderv2
 				when SET_MOTOR_POS_A_MSB =>
 					v_we   := "1";
 					v_addr := ADDRESS_POS_A_MSB;
-					v_din  := v_motor_a_decoder(15 downto 8);
+					v_din  := v_motor_a_pos(15 downto 8);
 					state <= SET_MOTOR_POS_A_MSB_DONE;
 					
 				when SET_MOTOR_POS_A_MSB_DONE =>
@@ -321,7 +347,7 @@ decoder_b:	FourXDecoderv2
 				when SET_MOTOR_POS_A_LSB =>
 					v_we   := "1";
 					v_addr := ADDRESS_POS_A_LSB;
-					v_din  := v_motor_a_decoder(7 downto 0);
+					v_din  := v_motor_a_pos(7 downto 0);
 					state <= SET_MOTOR_POS_A_LSB_DONE;
 					
 				when SET_MOTOR_POS_A_LSB_DONE =>
@@ -331,7 +357,7 @@ decoder_b:	FourXDecoderv2
 				when SET_MOTOR_POS_B_MSB =>
 					v_we   := "1";
 					v_addr := ADDRESS_POS_B_MSB;
-					v_din  := v_motor_b_decoder(15 downto 8);
+					v_din  := v_motor_b_pos(15 downto 8);
 					state <= SET_MOTOR_POS_B_MSB_DONE;
 					
 				when SET_MOTOR_POS_B_MSB_DONE =>
@@ -340,7 +366,7 @@ decoder_b:	FourXDecoderv2
 				when SET_MOTOR_POS_B_LSB =>
 					v_we   := "1";
 					v_addr := ADDRESS_POS_B_LSB;
-					v_din  := v_motor_b_decoder(7 downto 0);
+					v_din  := v_motor_b_pos(7 downto 0);
 					state <= SET_MOTOR_POS_B_LSB_DONE;
 					
 				when SET_MOTOR_POS_B_LSB_DONE =>
@@ -369,7 +395,8 @@ decoder_b:	FourXDecoderv2
 			motor_b_input <= v_motor_b_input;
 			motor_a_freerun <= v_aux(MOTOR_A_FREERUN_POS);
 			motor_b_freerun <= v_aux(MOTOR_B_FREERUN_POS);
-			
+			decoder_reset_a_from_arm <= v_aux(DECODER_A_RESET_POS);
+			decoder_reset_b_from_arm <= v_aux(DECODER_B_RESET_POS);
 		end if; --rising_edge(Clk)
 	end process;
 
