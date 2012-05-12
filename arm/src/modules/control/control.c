@@ -57,8 +57,8 @@ void control_task(void *pvParameters)
 			input[1] = FPGA_PWM_MAX;
 
 //		parameter(PUSH,PAN_PWM_P,input[0]);
-		parameter(PUSH,TILT_PWM_P,input[1]);
-//		parameter(PUSH,TILT_PWM_P, 0x8000); // FIXME
+//		parameter(PUSH,TILT_PWM_P,input[1]);
+		parameter(PUSH,TILT_PWM_P, 0x8000); // FIXME
 		parameter(PUSH,PAN_PWM_P, 0);
 
 		YIELD(YIELD_TIME_CONTROL_T);

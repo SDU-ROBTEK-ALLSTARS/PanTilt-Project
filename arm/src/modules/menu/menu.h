@@ -37,6 +37,8 @@
 #include "leds/leds.h"
 
 /*****************************    Macros    *******************************/
+#define SYSTEM_START_MENU		MAIN_MENU
+
 #define NUMBER_OF_FIELDS 		4
 #define NUMBER_OF_MENUS 		15
 #define NUMBER_OF_DECIMALS		1
