@@ -77,6 +77,9 @@ enum menu_names
 	SET_POS_SUB,
 	SET_FREE_RETURN,
 	SET_FREE_STO,
+	STEP_MENU,
+	STEP_START,
+	STEP_END
 
 };
 
@@ -203,4 +206,6 @@ INT32S parse_numpad(INT32S former_value);
 
 void red_only(void);
 void green_only(void);
+void begin_step(void);
+void end_step(void);
 #endif /* MENU_H_ */

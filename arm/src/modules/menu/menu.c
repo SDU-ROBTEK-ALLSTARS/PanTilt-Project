@@ -202,6 +202,26 @@ INT32S power_of_ten(INT8U operand)
 	return out;
 }
 
+void begin_step(void)
+{
+	red_led( FALSE );
+	yellow_led( FALSE );
+	green_led( TRUE );
+
+	parameter(PUSH,TILT_PWM_P, 0x8000);
+	parameter(PUSH,PAN_PWM_P, 0);
+}
+
+void end_step(void)
+{
+	red_led( FALSE );
+	yellow_led( FALSE );
+	green_led( FALSE );
+
+	parameter(PUSH,TILT_PWM_P, 0);
+	parameter(PUSH,PAN_PWM_P, 0);
+}
+
 void red_only(void)
 {
 	red_led( TRUE );
