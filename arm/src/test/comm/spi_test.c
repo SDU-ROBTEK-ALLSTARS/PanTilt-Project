@@ -97,6 +97,7 @@ static struct spi_test_id_t
                                                                                                \
     uart_write((INT8U *) spi_test_task[TASK_NUM].name, taskNameLen, portMAX_DELAY);            \
     uart_write((INT8U *) " stopped\n", 10, portMAX_DELAY);                                     \
+                                                                                               \
     while(1)                                                                                   \
     {                                                                                          \
     }                                                                                          \

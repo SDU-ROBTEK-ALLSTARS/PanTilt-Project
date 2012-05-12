@@ -24,9 +24,9 @@ An overview of the directory structure.
 This part of the README discusses the C code/microcontroller part of the project.
 
 ### Compiling the code ###
-A Makefile is supplied for GNU make to build the program. It requires a GNU "bare-metal" ARM toolchain (arm-none-eabi-) to be available on the $PATH.
+A Makefile is supplied for GNU make to build the program. It requires a "bare-metal" ARM toolchain (arm-none-eabi-) to be available on the $PATH.
 
-For those using Red Suite (Eclipse) the Makefile can still be used to build the project. Create a new project with "New" > "Other" > "C/C++" > "Makefile project with existing code" and then make sure an appropiate toolchain (Code Red GNU tools?) is chosen in the project options under "Toolchain Editor".
+For those using Red Suite (Eclipse) the Makefile can still be used to build the project. Create a new project with "New" > "Other" > "C/C++" > "Makefile project with existing code" and then make sure an appropiate toolchain (Code Red tools?) is chosen in the project options under "Toolchain Editor".
 
 The application has, thus far, only been tested with the Newlib C standard library implementation.
 

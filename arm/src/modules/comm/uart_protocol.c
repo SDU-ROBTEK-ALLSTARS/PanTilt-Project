@@ -122,6 +122,10 @@ void uart_protocol_task(void *parameters)
         (*command[packet.type][packet.instruction])(&packet);
       }
     }
+    else
+    {
+      vTaskDelay(portTICK_RATE_MS * 80);
+    }
   }
 }
 

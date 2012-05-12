@@ -33,6 +33,7 @@ void __error__(char *filename, unsigned long line)
  */
 void vApplicationStackOverflowHook(xTaskHandle *p_taskhandle, signed portCHAR *taskname)
 {
-  vTaskSuspend(*p_taskhandle);
-  uart_write((INT8U *) "Stack overflow:", 15, portMAX_DELAY);
+  while(1)
+  {
+  }
 }

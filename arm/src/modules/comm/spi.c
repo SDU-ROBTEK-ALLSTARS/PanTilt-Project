@@ -50,6 +50,7 @@ struct queue_list_item_t
   xQueueHandle queue_in;
   xQueueHandle queue_out;
   INT32U num_waiting_to_receive;
+  xSemaphoreHandle mutex;
 };
 struct queue_list_t
 {
@@ -218,36 +219,46 @@ INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_t
 
     if (new_caller_list_item != NULL)
     {
-      new_caller_list_item->owner_task = current_task_handle;
-      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->num_waiting_to_receive = 0;
 
-      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-
-      calling_task_list_item = new_caller_list_item;
-    }
-  }
-
-  /* Write data to transmit. */
-  result = 0;
-
-  if (calling_task_list_item != NULL)
-  {
-    while (result < nbytes)
-    {
-      if (xQueueSendToBack(calling_task_list_item->queue_out, &buf[result], ticks_to_block) == errQUEUE_FULL)
+      if ((new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))) &&
+          (new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))))
       {
-        break;
+        new_caller_list_item->mutex = xSemaphoreCreateMutex();
+        new_caller_list_item->owner_task = current_task_handle;
+        new_caller_list_item->num_waiting_to_receive = 0;
+        queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+        calling_task_list_item = new_caller_list_item;
       }
       else
       {
-        result++;
+        calling_task_list_item = NULL;
       }
     }
   }
 
-  return result;
+  /* Read, if task is registered */
+  if (calling_task_list_item != NULL)
+  {
+    result = 0;
+
+    while (result < nbytes)
+    {
+      if (xQueueSendToBack(calling_task_list_item->queue_out, &buf[result], ticks_to_block) == pdTRUE)         //debug!!!
+      {
+        result++;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    return result;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /**
@@ -275,22 +286,27 @@ INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block
 
     if (new_caller_list_item != NULL)
     {
-      new_caller_list_item->owner_task = current_task_handle;
-      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->num_waiting_to_receive = 0;
-
-      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-
-      calling_task_list_item = new_caller_list_item;
+      if ((new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))) &&
+          (new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))))
+      {
+        new_caller_list_item->mutex = xSemaphoreCreateMutex();
+        new_caller_list_item->owner_task = current_task_handle;
+        new_caller_list_item->num_waiting_to_receive = 0;
+        queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+        calling_task_list_item = new_caller_list_item;
+      }
+      else
+      {
+        calling_task_list_item = NULL;
+      }
     }
   }
 
   /* Read, if task is registered */
-  result = 0;
-
   if (calling_task_list_item != NULL)
   {
+    result = 0;
+
     while (result < nbytes)
     {
       if (xQueueReceive(calling_task_list_item->queue_in, &buf[result], ticks_to_block) == pdTRUE)
@@ -302,54 +318,14 @@ INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block
         break;
       }
     }
+
+    return result;
   }
-
-  return result;
+  else
+  {
+    return -1;
+  }
 }
-
-//BOOLEAN spi_register_task(xTaskHandle task_handle)
-//{
-//  xTaskHandle task_handle_to_register;
-//
-//  /* If NULL is passed, the calling tasks task-handle is registered */
-//  if (task_handle == NULL)
-//  {
-//    task_handle_to_register = xTaskGetCurrentTaskHandle();
-//  }
-//  else
-//  {
-//    task_handle_to_register = task_handle;
-//  }
-//
-//
-//
-//
-//
-//
-//  struct queue_list_item_t *calling_task_list_item =
-//                           queue_list_item_find(&list_registered_tasks, current_task_handle);
-//
-//  /* If the calling task is un-registered, make a list item (containing I/O queues)
-//  for it */
-//  if (calling_task_list_item == NULL)
-//  {
-//    struct queue_list_item_t *new_caller_list_item;
-//    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
-//
-//    if (new_caller_list_item != NULL)
-//    {
-//      new_caller_list_item->owner_task = current_task_handle;
-//      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-//      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-//      new_caller_list_item->num_waiting_to_receive = 0;
-//
-//      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-//
-//      calling_task_list_item = new_caller_list_item;
-//    }
-//  }
-//
-//}
 
 /**
  * SPI transmit task (using FreeRTOS)
@@ -388,13 +364,18 @@ void task_spi_transmit(void *params)
 
         if (num_messages_sent > 0)
         {
-          current_item->num_waiting_to_receive = num_messages_sent;
+          if (xSemaphoreTake(current_item->mutex, portMAX_DELAY) == pdTRUE)
+          {
+            current_item->num_waiting_to_receive = num_messages_sent;
+            xSemaphoreGive(current_item->mutex);
+          }
           xQueueSendToBack(intern_queue_waiting_to_receive, &current_item, portMAX_DELAY);
         }
 
         current_item = current_item->next;
       }
     }
+    vTaskDelay(portTICK_RATE_MS * 10);
   }
 }
 
@@ -415,10 +396,15 @@ void task_spi_receive(void *params)
   {
     xQueueReceive(intern_queue_in, &message, portMAX_DELAY);
 
-    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, portMAX_DELAY) == pdTRUE)
+    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, (portTickType)(portTICK_RATE_MS * 10)) == pdTRUE)
     {
       xQueueSendToBack(receiver->queue_in, &message, portMAX_DELAY);
-      receiver->num_waiting_to_receive--;
+
+      if (xSemaphoreTake(receiver->mutex, portMAX_DELAY) == pdTRUE)
+      {
+        receiver->num_waiting_to_receive--;
+        xSemaphoreGive(receiver->mutex);
+      }
 
       if (receiver->num_waiting_to_receive == 0)
       {
@@ -448,11 +434,11 @@ void spi_int_handler(void)
   unsigned long message;
   portBASE_TYPE higher_prio_task_woken = FALSE;
 
-  SSIIntClear(SSI0_BASE, SSI_RXTO); //SSI_ICR_RTIC
+  SSIIntClear(SSI0_BASE, (SSI_RXTO | SSI_RXFF)); //SSI_ICR_RTIC
 
-  if (SSIDataGetNonBlocking(SSI0_BASE, &message) == 1)
+  while (SSIDataGetNonBlocking(SSI0_BASE, &message) == 1)
   {
-    xQueueSendToBackFromISR(intern_queue_in, (spi_message_t *) &message, &higher_prio_task_woken); //pdPASS
+    xQueueSendToBackFromISR(intern_queue_in, (spi_message_t *) &message, &higher_prio_task_woken);
   }
 
   portEND_SWITCHING_ISR(higher_prio_task_woken);
@@ -511,12 +497,12 @@ BOOLEAN spi_init(void)
  */
 void spi_config_hw(void)
 {
-  //SSIDisable(SSI0_BASE);
-
   SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
   SysCtlDelay(3);
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
   SysCtlDelay(3);
+
+  SSIDisable(SSI0_BASE);
 
   GPIOPinTypeSSI(GPIO_PORTA_BASE, (GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5));
 

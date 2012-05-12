@@ -33,7 +33,7 @@
 #define NUMBER_OF_COUNTERS		10
 #define NUMBER_OF_STATES 		5
 #define NUMBER_OF_VARIABLES 	20
-#define NUMBER_OF_PARAMETERS	10
+#define NUMBER_OF_PARAMETERS	15
 
 /***************************    Enumerations    ****************************/
 enum data_commands
@@ -81,8 +81,9 @@ enum state_handles
 
 enum parameter_handles
 {
-	PAN_CURRENT_P,
-	TILT_CURRENT_P,
+  IDLE_P,
+  PAN_CURRENT_P,
+  TILT_CURRENT_P,
 	PAN_SETPOINT_P,
 	TILT_SETPOINT_P,
 	PAN_POSITION_P,
