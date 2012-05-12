@@ -30,8 +30,8 @@ void control_task(void *pvParameters)
 		setpoint[0] = parameter(POP,PAN_SETPOINT_P);
 		setpoint[1] = parameter(POP,TILT_SETPOINT_P);
 
-		feedback[0] = parameter(POP,PAN_POSITION_P);
-		feedback[1] = parameter(POP,TILT_POSITION_P);
+		feedback[0] = (float)parameter(POP,PAN_POSITION_P);
+		feedback[1] = (float)parameter(POP,TILT_POSITION_P);
 
 
 		//convert to human numbers
@@ -42,8 +42,8 @@ void control_task(void *pvParameters)
 		error[1] = setpoint[1] - feedback[1];
 
 		//calculate new inputs
-		input[0] = error[0] * P_TERM;
-		input[1] = error[1] * P_TERM;
+		input[0] = error[0] *91;//* P_TERM;
+		input[1] = error[1] *91;//* P_TERM;
 
 		//convert to pwm
 		if(input[0] < FPGA_PWM_MIN)
@@ -57,9 +57,9 @@ void control_task(void *pvParameters)
 			input[1] = FPGA_PWM_MAX;
 
 //		parameter(PUSH,PAN_PWM_P,input[0]);
-//		parameter(PUSH,TILT_PWM_P,input[1]);
-			parameter(PUSH,TILT_PWM_P, 0x8000); // FIXME
-		parameter(PUSH,PAN_PWM_P, 0x00);
+		parameter(PUSH,TILT_PWM_P,input[1]);
+//		parameter(PUSH,TILT_PWM_P, 0x8000); // FIXME
+		parameter(PUSH,PAN_PWM_P, 0);
 
 		YIELD(YIELD_TIME_CONTROL_T);
 	}
@@ -67,11 +67,11 @@ void control_task(void *pvParameters)
 
 void conversions(float *feedback)
 {
-  feedback[0] -= 0x8000;
-  feedback[1] -= 0x8000;
+	feedback[0] -= 0x8000;
+  	feedback[1] -= 0x8000;
 
-  feedback[0] *= 0.8;
-  feedback[1] *= 3.345;
+  	feedback[0] *= 3.34f;
+  	feedback[1] *= 3.34f;
 
 			//update current angles
 		parameter(PUSH,PAN_CURRENT_P,(INT32S)feedback[0]);

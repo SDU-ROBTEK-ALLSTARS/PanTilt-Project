@@ -32,8 +32,8 @@
 #define		PAN_FPGA_MIN		0x7F20
 #define		TILT_FPGA_MAX		0x0434
 #define		TILT_FPGA_MIN		0x0000
-#define 	FPGA_PWM_MAX		0x7FFF
-#define 	FPGA_PWM_MIN		0x0000
+#define 	FPGA_PWM_MAX		0x8000
+#define 	FPGA_PWM_MIN		0x7FFF
 #define		FPGA_PWM_CENTER		0x8000
 #define 	PAN_DEG_MAX			1800		//180.00 deg
 #define		TILT_DEG_MAX		3600		//360.00 deg

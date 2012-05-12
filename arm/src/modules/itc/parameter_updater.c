@@ -55,15 +55,12 @@ void param_updater_task(void *params)
       spi_read_from_task(&readBuf[i], 1, portMAX_DELAY);
     }
 
-    parameter(PUSH, TILT_POSITION_P, (INT32S) ((readBuf[8] << 8) + readBuf[9]));
-    parameter(PUSH, PAN_POSITION_P, (INT32S) ((readBuf[10] << 8) + readBuf[11]));
-//    parameter(PUSH, TILT_POSITION_P, (INT32S) ((0xA3 << 8) + 0x28));
-//    parameter(PUSH, PAN_POSITION_P, (INT32S) ((0x27 << 8) + 0x10));
+      parameter(PUSH, PAN_POSITION_P, (INT32S) ((readBuf[9] << 8) | readBuf[10]));
+      parameter(PUSH, TILT_POSITION_P, (INT32S) ((readBuf[11] << 8) | readBuf[12]));
 
-
-    parameter(PUSH, PAN_VELOCITY_P, (INT32S) ((readBuf[12] << 8) + readBuf[13]));
-    parameter(PUSH, TILT_VELOCITY_P, (INT32S) ((readBuf[14] << 8) + readBuf[15]));
-    //parameter(PUSH, FREE_P, (INT32S) readBuf[18]);
+//    parameter(PUSH, PAN_VELOCITY_P, (INT32S) ((readBuf[12] << 8) + readBuf[13]));
+//    parameter(PUSH, TILT_VELOCITY_P, (INT32S) ((readBuf[14] << 8) + readBuf[15]));
+//	  parameter(PUSH, FREE_P, (INT32S) readBuf[18]);
 
     vTaskDelay(PAR_UPDATER_TASK_FREQUENCY);
   }
