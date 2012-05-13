@@ -59,12 +59,10 @@ BOOLEAN display_buffer_set_blink(INT8U col_p, INT8U row_p, INT8U size);
 BOOLEAN display_buffer_clear_blink(void);
 BOOLEAN display_buffer_write_char(INT8U col_p, INT8U row_p, INT8U ch);
 BOOLEAN display_buffer_write_string(INT8U col_p, INT8U row_p, const char *str);
-BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p ,INT8U digits, INT32U num);
-BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8U digits,INT8U decimals,INT32S num);
+BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p ,INT8S digits, INT32U num);
+BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8S digits,INT8U decimals,INT32S num);
 BOOLEAN lcd_function(INT8U function);
 BOOLEAN display_buffer_goto_xy(INT8U col_p, INT8U row_p);
-void cursor_goto_xy(INT8U x, INT8U y);
-void blinking(BOOLEAN onoff);
 void lcd_init_display(void);
 void display_init(void);
 

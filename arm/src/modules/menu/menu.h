@@ -35,6 +35,7 @@
 #include "dreh/dreh.h"
 #include "adc/adc.h"
 #include "leds/leds.h"
+#include "comm/uart.h"
 
 /*****************************    Macros    *******************************/
 #define SYSTEM_START_MENU		MAIN_MENU

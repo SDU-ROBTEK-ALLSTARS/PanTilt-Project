@@ -204,9 +204,12 @@ INT32S power_of_ten(INT8U operand)
 
 void begin_step(void)
 {
+	unsigned char string[] = "step";
 	red_led( FALSE );
 	yellow_led( FALSE );
 	green_led( TRUE );
+
+	uart_write(string,4,1000);
 
 	parameter(PUSH,TILT_PWM_P, 0x8000);
 	parameter(PUSH,PAN_PWM_P, 0);
