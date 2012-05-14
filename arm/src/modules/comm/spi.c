@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -23,21 +25,24 @@
 /**
  * @file spi.c
  *
- * Using the FreeRTOS pvPortMalloc (heap2.c) to dynamically allocate queues
+ * Using the FreeRTOS pvPortMalloc to dynamically allocate queues
  *
  * Relies heavily on the fact that the MCU running this code is the master of
  * the SPI!
  *
+ *
  * TODO:
+ *
  * - Documentation
- * - ISR speed optimization (write directly to hardware here)
- * - Garbage collection: Deletion of list items (queues) which have not been
- *   used for a long time.
- * - Mutex considerations
+ *
+ * - ISR speed optimization (write directly to hardware)
+ *
+ * - Transmitting from user-task queues to the internal outgoing-queue
+ *   may still be a little flawed: Consider the case where a user task
+ *   call spi_write_from_task() several times in quick succession.
+ *
+ * - Max user tasks check when allocating new queues
  */
-
-#define SPI_INTERN_QUEUE_IN_SIZE     32
-#define SPI_PUBLIC_QUEUE_SIZE        16
 
 typedef unsigned char spi_message_t;
 
@@ -51,6 +56,7 @@ struct queue_list_item_t
   xQueueHandle queue_out;
   INT32U num_waiting_to_receive;
 };
+
 struct queue_list_t
 {
   struct queue_list_item_t *head;
@@ -59,10 +65,18 @@ struct queue_list_t
   xSemaphoreHandle mutex;
 };
 
+struct intern_waiting_to_receive_t
+{
+  xQueueHandle queue;
+  xSemaphoreHandle any_waiting;
+};
+
 /* List to store which queues are associated with which tasks,
    data input queue and queue of tasks waiting to receive data */
 static struct queue_list_t list_registered_tasks;
-static xQueueHandle intern_queue_in, intern_queue_waiting_to_receive;
+static struct intern_waiting_to_receive_t intern_waiting_to_receive;
+static xQueueHandle intern_queue_in;
+static xSemaphoreHandle user_task_waiting_to_transmit;
 
 /**
  * @internal
@@ -98,8 +112,8 @@ void queue_list_item_insert_end(struct queue_list_t *p_list, struct queue_list_i
       p_list->tail->next = p_item;
       p_list->tail = p_item;
     }
-    p_list->num_items++;
 
+    p_list->num_items++;
     xSemaphoreGive(p_list->mutex);
   }
 }
@@ -128,8 +142,10 @@ void queue_list_item_remove(struct queue_list_t *p_list, struct queue_list_item_
         p_item->prev->next = p_item->next;
         p_item->next->prev = p_item->prev;
       }
+
       p_list->num_items--;
     }
+
     xSemaphoreGive(p_list->mutex);
   }
 }
@@ -137,8 +153,7 @@ void queue_list_item_remove(struct queue_list_t *p_list, struct queue_list_item_
 /**
  * @internal
  */
-struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list,
-    xTaskHandle owner_task_target)
+struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list, xTaskHandle owner_task_target)
 {
   struct queue_list_item_t *current_item = NULL;
 
@@ -160,6 +175,7 @@ struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list,
         }
       }
     }
+
     xSemaphoreGive(p_list->mutex);
   }
 
@@ -175,22 +191,121 @@ struct queue_list_item_t *queue_list_item_find(struct queue_list_t *p_list,
 }
 
 /**
- * @internal (not used atm)
+ * Finds a list item which has items in its out-queue
+ *
+ * @internal
  */
-struct queue_list_item_t *queue_list_item_new(xTaskHandle task_handle)
+struct queue_list_item_t *queue_list_item_has_outgoing(struct queue_list_t *p_list)
 {
-  struct queue_list_item_t *new_list_item;
-  new_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+  struct queue_list_item_t *current_item = NULL;
 
-  if (new_list_item != NULL)
+  if (xSemaphoreTake(p_list->mutex, portMAX_DELAY) == pdTRUE)
   {
-    new_list_item->owner_task = task_handle;
-    new_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-    new_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-    new_list_item->num_waiting_to_receive = 0;
+    if (p_list->head != NULL)
+    {
+      current_item = p_list->head;
+
+      while (current_item != NULL)
+      {
+        if (uxQueueMessagesWaiting(current_item->queue_out))
+        {
+          break;
+        }
+        else
+        {
+          current_item = current_item->next;
+        }
+      }
+    }
+
+    xSemaphoreGive(p_list->mutex);
   }
 
-  return new_list_item;
+  /* Dont return HEAD if its not the right one */
+  if (uxQueueMessagesWaiting(current_item->queue_out))
+  {
+    return current_item;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/**
+ * Registers a task a with the SPI API.
+ *
+ * @param taskhandle is the handle of the task which should be registered.
+ *
+ * If NULL the passed as taskhandle, the calling task will get registered.
+ *
+ * @return TRUE is succesfully registered, FALSE otherwise.
+ */
+BOOLEAN spi_register_task(xTaskHandle taskhandle)
+{
+  struct queue_list_item_t *new_caller_list_item;
+  BOOLEAN ret = FALSE;
+
+  /* If NULL is passed as argument, use the task handle of the calling task. */
+  if (taskhandle == NULL)
+  {
+    taskhandle = xTaskGetCurrentTaskHandle();
+  }
+
+  /* If the calling task is un-registered, make a list item for it and initialize it.
+   * FreeRTOS' pvPortMalloc is used as memory allocator. */
+  if (queue_list_item_find(&list_registered_tasks, taskhandle) == NULL)
+  {
+    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
+
+    if ((new_caller_list_item != NULL) &&
+        (new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))) &&
+        (new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t))))
+    {
+      new_caller_list_item->owner_task = taskhandle;
+      new_caller_list_item->num_waiting_to_receive = 0;
+      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
+
+      ret = TRUE;
+    }
+  }
+
+  return ret;
+}
+
+/**
+ * UN-registers a task a with the SPI API.
+ *
+ * @param taskhandle is the handle of the task which should be registered.
+ *
+ * If NULL the passed as taskhandle, the calling task will get registered.
+ *
+ * @return TRUE is succesfully registered, FALSE otherwise.
+ */
+BOOLEAN spi_unregister_task(xTaskHandle taskhandle)
+{
+  //struct queue_list_item_t *caller_list_item;
+  BOOLEAN ret = FALSE;
+
+//  /* If NULL is passed as argument, use the task handle of the calling task. */
+//  if (taskhandle == NULL)
+//  {
+//    taskhandle = xTaskGetCurrentTaskHandle();
+//  }
+//
+//  /* If the item associated with the task can be found, remove it from the list */
+//  caller_list_item = queue_list_item_find (&list_registered_tasks, taskhandle);
+//
+//  if (caller_list_item != NULL)
+//  {
+//    queue_list_item_remove (&list_registered_tasks, caller_list_item);
+//
+//    TODO: Free memory
+//
+//    ret = TRUE;
+//  }
+
+  return ret;
 }
 
 /**
@@ -200,54 +315,43 @@ struct queue_list_item_t *queue_list_item_new(xTaskHandle task_handle)
  * @param nbytes is the number of bytes to write.
  * @param ticks_to_block is the amount of ticks the function may block for.
  *
- * @return the number of bytes succesfully written.
+ * @return the number of bytes succesfully written, or -1 if calling task is not registered.
  */
 INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_to_block)
 {
   INT32U result;
   xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
-  struct queue_list_item_t *calling_task_list_item =
-    queue_list_item_find(&list_registered_tasks, current_task_handle);
+  struct queue_list_item_t *calling_task_list_item = queue_list_item_find(&list_registered_tasks, current_task_handle);
 
-  /* If the calling task is un-registered, make a list item (containing I/O queues)
-  for it */
-  if (calling_task_list_item == NULL)
-  {
-    struct queue_list_item_t *new_caller_list_item;
-    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
-
-    if (new_caller_list_item != NULL)
-    {
-      new_caller_list_item->owner_task = current_task_handle;
-      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->num_waiting_to_receive = 0;
-
-      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-
-      calling_task_list_item = new_caller_list_item;
-    }
-  }
-
-  /* Write data to transmit. */
-  result = 0;
-
+  /* Read, if task is registered */
   if (calling_task_list_item != NULL)
   {
+    result = 0;
+
     while (result < nbytes)
     {
-      if (xQueueSendToBack(calling_task_list_item->queue_out, &buf[result], ticks_to_block) == errQUEUE_FULL)
-      {
-        break;
-      }
-      else
+      if (xQueueSendToBack(calling_task_list_item->queue_out, &buf[result], ticks_to_block) == pdTRUE)
       {
         result++;
       }
+      else
+      {
+        break;
+      }
     }
-  }
 
-  return result;
+    /* Give the semaphore to the transmitter task so it can get some work done */
+    if (result > 0)
+    {
+      xSemaphoreGive(user_task_waiting_to_transmit);
+    }
+
+    return result;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /**
@@ -257,40 +361,19 @@ INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_t
  * @param nbytes is the number of bytes to read.
  * @param ticks_to_block is the amount of ticks the function may block for.
  *
- * @return the number of bytes succesfully read.
+ * @return the number of bytes succesfully read, or -1 if calling task is not registered.
  */
 INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block)
 {
   INT32U result;
   xTaskHandle current_task_handle = xTaskGetCurrentTaskHandle();
-  struct queue_list_item_t *calling_task_list_item =
-    queue_list_item_find(&list_registered_tasks, current_task_handle);
-
-  /* If the calling task is un-registered, make a list item (containing I/O queues)
-  for it */
-  if (calling_task_list_item == NULL)
-  {
-    struct queue_list_item_t *new_caller_list_item;
-    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
-
-    if (new_caller_list_item != NULL)
-    {
-      new_caller_list_item->owner_task = current_task_handle;
-      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-      new_caller_list_item->num_waiting_to_receive = 0;
-
-      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-
-      calling_task_list_item = new_caller_list_item;
-    }
-  }
+  struct queue_list_item_t *calling_task_list_item = queue_list_item_find(&list_registered_tasks, current_task_handle);
 
   /* Read, if task is registered */
-  result = 0;
-
   if (calling_task_list_item != NULL)
   {
+    result = 0;
+
     while (result < nbytes)
     {
       if (xQueueReceive(calling_task_list_item->queue_in, &buf[result], ticks_to_block) == pdTRUE)
@@ -302,54 +385,14 @@ INT32S spi_read_from_task(INT8U *buf, INT32U nbytes, portTickType ticks_to_block
         break;
       }
     }
+
+    return result;
   }
-
-  return result;
+  else
+  {
+    return -1;
+  }
 }
-
-//BOOLEAN spi_register_task(xTaskHandle task_handle)
-//{
-//  xTaskHandle task_handle_to_register;
-//
-//  /* If NULL is passed, the calling tasks task-handle is registered */
-//  if (task_handle == NULL)
-//  {
-//    task_handle_to_register = xTaskGetCurrentTaskHandle();
-//  }
-//  else
-//  {
-//    task_handle_to_register = task_handle;
-//  }
-//
-//
-//
-//
-//
-//
-//  struct queue_list_item_t *calling_task_list_item =
-//                           queue_list_item_find(&list_registered_tasks, current_task_handle);
-//
-//  /* If the calling task is un-registered, make a list item (containing I/O queues)
-//  for it */
-//  if (calling_task_list_item == NULL)
-//  {
-//    struct queue_list_item_t *new_caller_list_item;
-//    new_caller_list_item = (struct queue_list_item_t *) pvPortMalloc(sizeof(struct queue_list_item_t));
-//
-//    if (new_caller_list_item != NULL)
-//    {
-//      new_caller_list_item->owner_task = current_task_handle;
-//      new_caller_list_item->queue_in = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-//      new_caller_list_item->queue_out = xQueueCreate(SPI_PUBLIC_QUEUE_SIZE, sizeof(spi_message_t));
-//      new_caller_list_item->num_waiting_to_receive = 0;
-//
-//      queue_list_item_insert_end(&list_registered_tasks, new_caller_list_item);
-//
-//      calling_task_list_item = new_caller_list_item;
-//    }
-//  }
-//
-//}
 
 /**
  * SPI transmit task (using FreeRTOS)
@@ -365,15 +408,17 @@ void task_spi_transmit(void *params)
   INT32U num_messages_sent, num_messages_waiting;
   spi_message_t message;
 
-  while(1)
+  while (1)
   {
-    /* If there are messages waiting in ANY of the task-out-queues, transmit
-    that data and remember by who it was sent and how much. */
-    if (list_registered_tasks.head != NULL)
+    /* The task blocks on a semaphore that is given when a user-task places
+     * data in it's out-queue via. spi_write_from_task(). */
+    if (xSemaphoreTake(user_task_waiting_to_transmit, portMAX_DELAY) == pdTRUE)
     {
-      current_item = list_registered_tasks.head;
+      /* Find a list item which has messages in its out-queue */
+      current_item = queue_list_item_has_outgoing(&list_registered_tasks);
 
-      while (current_item != NULL)
+      /* and send the data */
+      if (current_item != NULL)
       {
         num_messages_sent = 0;
         num_messages_waiting = uxQueueMessagesWaiting(current_item->queue_out);
@@ -382,17 +427,19 @@ void task_spi_transmit(void *params)
         {
           xQueueReceive(current_item->queue_out, &message, portMAX_DELAY);
           SSIDataPut(SSI0_BASE, (unsigned long) message);
-          //xQueueSendToBack(intern_queue_in, &message, portMAX_DELAY);/* FOR DEBUG "FAKE" LOOPBACK:  */
+          /* FOR DEBUG "FAKE" LOOPBACK:  xQueueSendToBack(intern_queue_in, &message, portMAX_DELAY); */
           num_messages_sent++;
         }
 
         if (num_messages_sent > 0)
         {
-          current_item->num_waiting_to_receive = num_messages_sent;
-          xQueueSendToBack(intern_queue_waiting_to_receive, &current_item, portMAX_DELAY);
+          if (xSemaphoreTake(list_registered_tasks.mutex, portMAX_DELAY) == pdTRUE)
+          {
+            current_item->num_waiting_to_receive = num_messages_sent;
+            xSemaphoreGive(list_registered_tasks.mutex);
+          }
+          xQueueSendToBack(intern_waiting_to_receive.queue, &current_item, portMAX_DELAY);
         }
-
-        current_item = current_item->next;
       }
     }
   }
@@ -411,27 +458,31 @@ void task_spi_receive(void *params)
   spi_message_t message;
   struct queue_list_item_t *receiver;
 
-  while(1)
+  while (1)
   {
-    xQueueReceive(intern_queue_in, &message, portMAX_DELAY);
-
-    if (xQueuePeek(intern_queue_waiting_to_receive, &receiver, portMAX_DELAY) == pdTRUE)
+    /* The task blocks on the intern_queue_in which is filled by the receive
+     * interrupt service routine. */
+    if (xQueueReceive(intern_queue_in, &message, portMAX_DELAY) == pdTRUE)
     {
-      xQueueSendToBack(receiver->queue_in, &message, portMAX_DELAY);
-      receiver->num_waiting_to_receive--;
-
-      if (receiver->num_waiting_to_receive == 0)
+      /* If a message was received it means that something was sent. Thus, there
+       * must be a receiver which is why we don't block on this queue. */
+      if (xQueuePeek(intern_waiting_to_receive.queue, &receiver, (portTickType) 0) == pdTRUE)
       {
-        /* Receive just to delete from queue */
-        xQueueReceive(intern_queue_waiting_to_receive, &receiver, portMAX_DELAY);
+        xQueueSendToBack(receiver->queue_in, &message, portMAX_DELAY);
+
+        if (xSemaphoreTake(list_registered_tasks.mutex, portMAX_DELAY) == pdTRUE)
+        {
+          receiver->num_waiting_to_receive--;
+
+          if (receiver->num_waiting_to_receive == 0)
+          {
+            /* Receive just to delete from queue */
+            xQueueReceive(intern_waiting_to_receive.queue, &receiver, portMAX_DELAY);
+          }
+          xSemaphoreGive(list_registered_tasks.mutex);
+        }
       }
     }
-    /*
-    else
-    {
-      Error: No receiver??
-    }
-    */
   }
 }
 
@@ -448,11 +499,11 @@ void spi_int_handler(void)
   unsigned long message;
   portBASE_TYPE higher_prio_task_woken = FALSE;
 
-  SSIIntClear(SSI0_BASE, SSI_RXTO); //SSI_ICR_RTIC
+  SSIIntClear(SSI0_BASE, (SSI_RXTO | SSI_RXFF));
 
   if (SSIDataGetNonBlocking(SSI0_BASE, &message) == 1)
   {
-    xQueueSendToBackFromISR(intern_queue_in, (spi_message_t *) &message, &higher_prio_task_woken); //pdPASS
+    xQueueSendToBackFromISR(intern_queue_in, (spi_message_t *) &message, &higher_prio_task_woken);
   }
 
   portEND_SWITCHING_ISR(higher_prio_task_woken);
@@ -470,31 +521,17 @@ void spi_int_handler(void)
  */
 BOOLEAN spi_init(void)
 {
-  /* Public queues for in- and output */
-  intern_queue_in = xQueueCreate(SPI_INTERN_QUEUE_IN_SIZE, sizeof(spi_message_t));
-  intern_queue_waiting_to_receive = xQueueCreate(SPI_NUM_MAX_USERTASKS, sizeof(struct queue_list_item_t *));
-
-  /* Create transmit task */
-  INT8U task_create_success = xTaskCreate(task_spi_transmit,
-                                          (signed portCHAR *) "SPI_TX",
-                                          configMINIMAL_STACK_SIZE,
-                                          NULL,
-                                          tskIDLE_PRIORITY,
-                                          NULL);
-
-  task_create_success |= xTaskCreate(task_spi_receive,
-                                     (signed portCHAR *) "SPI_RX",
-                                     configMINIMAL_STACK_SIZE,
-                                     NULL,
-                                     tskIDLE_PRIORITY,
-                                     NULL);
-
-  queue_list_initialize(&list_registered_tasks);
-
-  /* Make sure everything is constructed succesfully.
-  The return value signals the outcome. */
-  if (intern_queue_in && task_create_success && intern_queue_waiting_to_receive)
+  if (/* Internal queues for in- and output */
+      (intern_queue_in = xQueueCreate(SPI_INTERN_QUEUE_IN_SIZE, sizeof(spi_message_t))) &&
+      (intern_waiting_to_receive.queue = xQueueCreate(SPI_NUM_MAX_USERTASKS, sizeof(struct queue_list_item_t *))) &&
+      /* Tasks */
+      xTaskCreate(task_spi_transmit, (signed portCHAR *) "SPI_TX", (configMINIMAL_STACK_SIZE), NULL, SPI_TX_TASK_PRIORITY, NULL) &&
+      xTaskCreate(task_spi_receive, (signed portCHAR *) "SPI_RX", (configMINIMAL_STACK_SIZE), NULL, SPI_RX_TASK_PRIORITY, NULL)
+     )
   {
+    queue_list_initialize(&list_registered_tasks);
+    vSemaphoreCreateBinary(intern_waiting_to_receive.any_waiting);
+    vSemaphoreCreateBinary(user_task_waiting_to_transmit);
     return TRUE;
   }
   else
@@ -511,18 +548,18 @@ BOOLEAN spi_init(void)
  */
 void spi_config_hw(void)
 {
-  //SSIDisable(SSI0_BASE);
-
   SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
   SysCtlDelay(3);
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
   SysCtlDelay(3);
 
+  SSIDisable(SSI0_BASE);
+
   GPIOPinTypeSSI(GPIO_PORTA_BASE, (GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5));
 
   /* Set clock rate, SPH=0, SPO=1, Freescale, 2 MHz, 8 bit data size */
   SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
-                     SSI_MODE_MASTER, SPI_CONF_BITRATE, SPI_CONF_DATA_WIDTH);
+                     SSI_MODE_MASTER, SPI_BITRATE, SPI_DATA_WIDTH);
 
   /* Enable receive "FIFO half-full or more" and "receive timeout"-interrupts */
   IntEnable(INT_SSI0);
@@ -532,7 +569,7 @@ void spi_config_hw(void)
   configMAX_SYSCALL_INTERRUPT_PRIORITY so that we can still use FreeRTOS API
   functions from within it.
   Remember: Higher value => lower priority. */
-  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + (unsigned char) (1 << 5));
+  IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + (unsigned char)(1 << 5));
 
   SSIEnable(SSI0_BASE);
 }
