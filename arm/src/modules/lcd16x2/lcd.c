@@ -121,8 +121,7 @@ BOOLEAN display_buffer_write_char(INT8U col_p, INT8U row_p, INT8U ch)
 		display_buffer[col_p][row_p].display_dirty_bit = TRUE;
 		GIVE_SEM_LCD_BUFFER
 	}
-	//	else
-	//		return_value = FALSE;
+
 	return return_value;
 }
 
@@ -145,7 +144,7 @@ BOOLEAN display_buffer_write_string(INT8U col_p, INT8U row_p, const char *str)
 
 	return return_value; 
 }
-BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p,INT8U digits,INT32U num)
+BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p,INT8S digits,INT32U num)
 {
 	BOOLEAN return_value = TRUE;
 
@@ -159,21 +158,25 @@ BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p,INT8U digits,INT32U 
 			GIVE_SEM_LCD_BUFFER
 		}
 	}
-	while(( num /= 10 ) > 0);											//remove digit
+	while(( num /= 10 ) > 0 && digits > 0);											//remove digit
 
-	while(digits)														//run through unused digits
+	TEST_SEM_LCD_BUFFER
 	{
-		display_buffer[col_p+digits-1][row_p].display_char = NO_DIGIT;
-		digits--;
+		while(digits > 0)														//run through unused digits
+		{
+			display_buffer[col_p+digits-1][row_p].display_char = NO_DIGIT;
+			digits--;
+		}
+		GIVE_SEM_LCD_BUFFER
 	}
 
 	return return_value;
 }
 
-BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8U digits,INT8U decimals,INT32S num)
+BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8S digits,INT8U decimals,INT32S num)
 {
 	BOOLEAN return_value = TRUE;
-	INT8U dot;
+	INT8S dot;
 
 
 	TEST_SEM_LCD_BUFFER
@@ -209,12 +212,16 @@ BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8U digits,INT8U 
 			GIVE_SEM_LCD_BUFFER
 		}
 	}
-	while(( num /= 10 ) > 0);											//remove digit
+	while(( num /= 10 ) > 0 && digits > 0);											//remove digit
 
-	while(digits)														//run through unused digits
+	TEST_SEM_LCD_BUFFER
 	{
-		display_buffer[col_p+digits-1][row_p].display_char = NO_DIGIT;
-		digits--;
+		while(digits > 0)														//run through unused digits
+		{
+			display_buffer[col_p+digits-1][row_p].display_char = NO_DIGIT;
+			digits--;
+		}
+		GIVE_SEM_LCD_BUFFER
 	}
 
 	return return_value;
@@ -284,44 +291,6 @@ void lcd_init_display(void)
 			}
 		}
 	}
-}
-
-void blinking(BOOLEAN onoff)
-{
-	if(onoff)
-	{
-		//		lcd_write_4bit_mode(0x0F);	// display on, blink cursor on
-		//		lcd_delay_us(40);
-		lcd_function(0x0F);
-	}
-	else
-	{
-		//		lcd_write_4bit_mode(0x0C);	// display on, blink cursor off
-		//		lcd_delay_us(40);
-		lcd_function(0x0C);
-	}
-}
-
-void cursor_goto_xy(INT8U x, INT8U y)
-{
-	lcd_rs_low();
-	lcd_write_4bit_mode(0x0F);	// display on, blink cursor on
-	lcd_delay_us(40);
-	lcd_write_4bit_mode(0x01);	// Home
-	lcd_delay_us(40);
-	// write control bytes
-	//	lcd_delay_us(40);
-	//	lcd_write_port(0x03);  	// attention!
-	//	lcd_write_4bit_mode(0x02);		//Home
-	//	lcd_delay_us(40);
-	//	if(y)
-	//		x += 2;					//rolls to line 2 after 40th digit
-	//	while(x)
-	//	{
-	//		lcd_write_4bit_mode(0x14);	// Move right
-	//		lcd_delay_us(40);
-	//		x--;
-	//	}
 }
 
 void display_init(void)

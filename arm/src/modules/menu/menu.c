@@ -16,7 +16,7 @@ void menu_task(void *pvParameters)
 
 	//setup menus
 	init_menus();
-	menu = menu_handler(MAIN_MENU);
+	menu = menu_handler(SYSTEM_START_MENU);
 
 	red_led( FALSE );
 	yellow_led( FALSE );
@@ -45,13 +45,15 @@ void menu_task(void *pvParameters)
 		for(i=0 ; i < NUMBER_OF_FIELDS ; i++)
 		{
 			if(menu->field[i].show)
-				display_buffer_write_decimal(	menu->field[i].begin.x,
+				display_buffer_write_decimal(
+						menu->field[i].begin.x,
 						menu->field[i].begin.y,
 						menu->field[i].size,
 						NUMBER_OF_DECIMALS,
 						parameter(POP,menu->field[i].parameter));
 			if(menu->field[i].blink)
-				display_buffer_set_blink( 		menu->field[i].begin.x,
+				display_buffer_set_blink(
+						menu->field[i].begin.x,
 						menu->field[i].begin.y,
 						menu->field[i].size);
 		}
@@ -198,6 +200,26 @@ INT32S power_of_ten(INT8U operand)
 	default: out = 0; break;
 	}
 	return out;
+}
+
+void begin_step(void)
+{
+	red_led( FALSE );
+	yellow_led( FALSE );
+	green_led( TRUE );
+
+	parameter(PUSH,TILT_PWM_P, 0x8000);
+	parameter(PUSH,PAN_PWM_P, 0);
+}
+
+void end_step(void)
+{
+	red_led( FALSE );
+	yellow_led( FALSE );
+	green_led( FALSE );
+
+	parameter(PUSH,TILT_PWM_P, 0);
+	parameter(PUSH,PAN_PWM_P, 0);
 }
 
 void red_only(void)

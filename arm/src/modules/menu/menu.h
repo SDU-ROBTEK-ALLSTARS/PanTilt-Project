@@ -35,8 +35,11 @@
 #include "dreh/dreh.h"
 #include "adc/adc.h"
 #include "leds/leds.h"
+#include "comm/uart.h"
 
 /*****************************    Macros    *******************************/
+#define SYSTEM_START_MENU		MAIN_MENU
+
 #define NUMBER_OF_FIELDS 		4
 #define NUMBER_OF_MENUS 		15
 #define NUMBER_OF_DECIMALS		1
@@ -75,6 +78,9 @@ enum menu_names
 	SET_POS_SUB,
 	SET_FREE_RETURN,
 	SET_FREE_STO,
+	STEP_MENU,
+	STEP_START,
+	STEP_END
 
 };
 
@@ -201,4 +207,6 @@ INT32S parse_numpad(INT32S former_value);
 
 void red_only(void);
 void green_only(void);
+void begin_step(void);
+void end_step(void);
 #endif /* MENU_H_ */
