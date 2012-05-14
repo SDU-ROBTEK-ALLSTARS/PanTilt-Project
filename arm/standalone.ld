@@ -7,47 +7,48 @@ MEMORY
 
 SECTIONS
 {
-  .text : ALIGN(4)
+  .text : ALIGN(8)
   {
+    FILL(0xFF)
     _text = .;
     KEEP(*(.isr_vector))
     *(.text*)
     *(.rodata*)
-    . = ALIGN(4);
+    . = ALIGN(8);
   } > FLASH
 
-	.ARM.extab : ALIGN(4)
+	.ARM.extab : ALIGN(8)
 	{
 		*(.ARM.extab* .gnu.linkonce.armextab.*)
 	} > FLASH
 
 	__exidx_start = .;
 
-	.ARM.exidx : ALIGN(4)
+	.ARM.exidx : ALIGN(8)
 	{
 		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
 	} > FLASH
 
 	__exidx_end = .;
 
-  . = ALIGN(4);
+  . = ALIGN(8);
 	_etext = .;
 
-  .data : ALIGN(4)
+  .data : ALIGN(8)
   {
     _data = .;
     *(vtable)
     *(.data*)
-    . = ALIGN(4);
+    . = ALIGN(8);
     _edata = .;
   } > SRAM AT>FLASH
 
-  .bss : ALIGN(4)
+  .bss : ALIGN(8)
   {
     _bss = .;
     *(.bss*)
     *(COMMON)
-    . = ALIGN(4);
+    . = ALIGN(8);
     _ebss = .;
     _end = .;
   } > SRAM
@@ -55,5 +56,5 @@ SECTIONS
   /* These are for _sbrk(). We'll give it whatever memory is
    * left as heap to play with. */
   PROVIDE(_HEAP_START = _end);
-  PROVIDE(_HEAP_END = ALIGN(ORIGIN(SRAM) + LENGTH(SRAM), 4));
+  PROVIDE(_HEAP_END = ALIGN(ORIGIN(SRAM) + LENGTH(SRAM), 8));
 }
