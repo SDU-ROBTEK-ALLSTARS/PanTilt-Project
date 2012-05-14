@@ -25,7 +25,7 @@ begin
 				if hysteresis > 0 then
 				hysteresis := hysteresis -1;
 				end if;
-			end if; 
+			end if;  
 			if output_state = '1' and hysteresis < 4 then
 				output_state := '0';
 			end if;
