@@ -23,6 +23,7 @@ void init_menus(void)
 {
 	menu_t *dummy;
 	INT8U i;
+	menu_handler(FIRST_RUN);
 
 	SETUP(MAIN_MENU)
 		TOP("CURRENT POSITION") 		BOTTOM(	"P:      T:      ")
