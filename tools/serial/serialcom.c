@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <termios.h>
+#include <errno.h>
 
 
 #define UART_PACKET_HEADER_SIZE      4
@@ -35,6 +36,7 @@ void triggerSPITest(int8_t num_loops);
 int longEchoTest(int num_packets);
 void requestRuntimeStats(void);
 void sendToSPI(void);
+void getStepResponse(int numMeasurements, int loggerTaskDelayMs);
 
 static const char *deviceName;
 static int portId;
@@ -46,11 +48,11 @@ int main(int argc, char *argv[])
   bool run = true;
   int result;
 
-  if( argc == 2 )
+  if (argc == 2)
   {
     deviceName = argv[1];
   }
-  else if( argc > 2 )
+  else if (argc > 2)
   {
     printf("Too many arguments supplied.\n");
   }
@@ -65,7 +67,7 @@ int main(int argc, char *argv[])
 
   if ((portId != -1) && (echoTest() != -1))
   {
-    printf("Connection opened on %s (%d) and OK!\n", deviceName, portId);
+    printf("Connection opened on %s and OK!\n", deviceName);
 
     /* Main menu */
     while (run == true)
@@ -73,6 +75,7 @@ int main(int argc, char *argv[])
       printf("\nSelect option:\n");
       printf(" 1)\tPrint run-time stats\n");
       printf(" 2)\tSend to SPI\n");
+      printf(" 3)\tStep response\n");
       printf(" 4)\tListen!\n");
       printf(" 6)\tRun SPI test\n");
       printf(" 7)\tLong echo test\n");
@@ -95,6 +98,7 @@ int main(int argc, char *argv[])
         break;
 
       case '3':
+        getStepResponse(1000, 2);
         break;
 
       case '4':
@@ -112,6 +116,7 @@ int main(int argc, char *argv[])
 
       case '7':
         result = longEchoTest(32);
+
         if (result == -1)
         {
           printf("Fail.\n");
@@ -120,6 +125,7 @@ int main(int argc, char *argv[])
         {
           printf("Pass ALL.\n");
         }
+
         break;
 
       case '0':
@@ -159,6 +165,114 @@ void sendToSPI(void)
   sendPacket(&packet);
 }
 
+void getStepResponse(int numMeasurements, int loggerTaskDelayMs)
+{
+  int dataSize = numMeasurements*4*2;
+  uint8_t readBuf[dataSize];
+  int32_t val;
+  uint32_t uVal;
+  int result, sumBytesRead, i, j;
+  FILE *fp;
+  bool timeDataNext;
+  xUartPacket packet;
+
+  /* First, request the step response */
+  packet.type = UART_PACKET_TYPE_SET;
+  packet.instruction = 3;
+  packet.datalength = 8;
+  packet.data[0] = (int8_t) numMeasurements;
+  packet.data[1] = (int8_t) (numMeasurements >> 8);
+  packet.data[2] = (int8_t) (numMeasurements >> 16);
+  packet.data[3] = (int8_t) (numMeasurements >> 24);
+  packet.data[4] = (int8_t) loggerTaskDelayMs;
+  packet.data[5] = (int8_t) (loggerTaskDelayMs >> 8);
+  packet.data[6] = (int8_t) (loggerTaskDelayMs >> 16);
+  packet.data[7] = (int8_t) (loggerTaskDelayMs >> 24);
+
+  if (sendPacket(&packet) == -1)
+  {
+    printf("Error sending packet.\n");
+    return;
+  }
+
+  /* Then open file to write log data to */
+  fp = fopen("steplog.dat", "w");
+
+  if (fp == NULL)
+  {
+    printf("I couldn't open steplog.dat for writing.\n");
+    return;
+  }
+
+  /* Loop a number of times to read incoming data. Not forever, though. */
+  sumBytesRead = 0;
+  i = 0;
+
+  while (sumBytesRead < dataSize && i < 100)
+  {
+    result = read(portId, &readBuf[sumBytesRead], (dataSize - sumBytesRead));
+
+    if (result > 0)
+    {
+      sumBytesRead += result;
+    }
+
+    i++;
+    usleep(100000);
+  }
+
+  /* If correct data is received, format it and write to log file
+   * The 4 first bytes are unsigned int timeData
+   * next 4 bytes are signed int posData
+   * and so on */
+  if (sumBytesRead != dataSize)
+  {
+    printf("Have only received %d bytes; expected %d.\n", sumBytesRead, dataSize);
+    return;
+  }
+
+  printf("Done: %d bytes received.\n", sumBytesRead);
+
+  fprintf(fp, "Bytes received: %d\n", sumBytesRead);
+  fprintf(fp, "Number of measurements: %d\n", numMeasurements);
+  fprintf(fp, "Logger task approx. yield time: %d ms\n", loggerTaskDelayMs);
+  fprintf(fp, "Time(ms),Position\n");
+
+  i = 0;
+  timeDataNext = true;
+
+  while (i < sumBytesRead)
+  {
+    uVal = 0;
+    val = 0;
+
+    if (timeDataNext == true)
+    {
+      /* Next 4 bytes are timeData */
+      for (j=0; j<4; j++)
+      {
+        uVal |= (uint32_t) readBuf[i] << (8 * j);
+        i++;
+      }
+      fprintf(fp, "%d,", uVal);
+      timeDataNext = false;
+    }
+    else
+    {
+      /* Next 4 bytes are posData */
+      for (j=0; j<4; j++)
+      {
+        val |= (int32_t) readBuf[i] << (8 * j);
+        i++;
+      }
+      fprintf(fp, "%d\n", val);
+      timeDataNext = true;
+    }
+  }
+
+  fclose(fp);
+}
+
 void requestRuntimeStats(void)
 {
   xUartPacket packet;
@@ -189,13 +303,15 @@ void listen(unsigned int seconds, char *format)
   for (j=0; j<seconds; j++)
   {
     result = read(portId, readBuf, 255);
+
     if (result != -1)
     {
       for (i=0; i<result; i++)
       {
-        printf (format, readBuf[i]);
+        printf(format, readBuf[i]);
       }
     }
+
     fflush(stdout);
     sleep(1);
   }
@@ -214,9 +330,9 @@ int setTime(void)
   packet.instruction = 4; /* set time instr is #4 */
   packet.datalength = 4;
   packet.data[0] = (int8_t) seconds;
-  packet.data[1] = (int8_t) (seconds >> 8);
-  packet.data[2] = (int8_t) (seconds >> 16);
-  packet.data[3] = (int8_t) (seconds >> 24);
+  packet.data[1] = (int8_t)(seconds >> 8);
+  packet.data[2] = (int8_t)(seconds >> 16);
+  packet.data[3] = (int8_t)(seconds >> 24);
 
   res = sendPacket(&packet);
 
@@ -237,6 +353,7 @@ int longEchoTest(int num_packets)
     packet.type = UART_PACKET_TYPE_GET;
     packet.instruction = 5; /* 5 is the echo instr */
     packet.datalength = UART_PACKET_MAX_DATA_SIZE;
+
     for (i=0; i<packet.datalength; i++)
     {
       packet.data[i] = 'a' + i;
@@ -244,6 +361,7 @@ int longEchoTest(int num_packets)
 
     /* Send packet */
     result = sendPacket(&packet);
+
     if (result != (packet.datalength + UART_PACKET_HEADER_SIZE))
     {
       return -1;
@@ -252,7 +370,8 @@ int longEchoTest(int num_packets)
     sleep(1);
 
     /* Read incoming */
-    result = read(portId, readBuf, packet.datalength); /* only .data is echoed */
+    result = read(portId, readBuf, packet.datalength);  /* only .data is echoed */
+
     if (result != packet.datalength)
     {
       return -1;
@@ -285,44 +404,78 @@ int longEchoTest(int num_packets)
 int echoTest(void)
 {
   xUartPacket packet;
-  int i, result;
+  int i, result, test;
   char readBuf[255];
+  bool connOk = false;
+  int numTries = 1;
 
   packet.type = UART_PACKET_TYPE_GET;
   packet.instruction = 5; /* 5 is the echo instr */
   packet.datalength = UART_PACKET_MAX_DATA_SIZE;
+
   for (i=0; i<packet.datalength; i++)
   {
     packet.data[i] = 'a' + i;
   }
 
-  /* Send packet */
-  result = sendPacket(&packet);
-  if (result != (packet.datalength + UART_PACKET_HEADER_SIZE))
+  do
   {
-    return -1;
-  }
-
-  sleep(1);
-
-  /* Read incoming */
-  result = read(portId, readBuf, packet.datalength); /* only .data is echoed */
-  if (result != packet.datalength)
-  {
-    return -1;
-  }
-
-  /* Check OK-ness */
-  for (i=0; i<result; i++)
-  {
-    if (readBuf[i] != packet.data[i])
+    if (numTries > 1)
     {
-      printf("Character mismatch error.\n");
-      return -1;
+      tcflush(portId, TCIOFLUSH);
+      sleep(1);
     }
-  }
 
-  return result;
+    printf("Trying connection (%d)...\n", numTries);
+    fflush(stdout);
+
+    /* Send packet */
+    result = sendPacket(&packet);
+
+    if (result == (packet.datalength + UART_PACKET_HEADER_SIZE))
+    {
+      /* Transmission OK; read incoming */
+      sleep(1);
+
+      result = read(portId, readBuf, packet.datalength);  /* only .data is echoed */
+
+      if (result == packet.datalength)
+      {
+        /* Read OK; check OK-ness of returned data */
+        test = 0;
+
+        for (i=0; i<result; i++)
+        {
+          if (readBuf[i] != packet.data[i])
+          {
+            printf("Character mismatch error.\n");
+            break;
+          }
+          else
+          {
+            test++;
+          }
+        }
+
+        if (test == result)
+        {
+          connOk = true;
+        }
+      }
+    }
+
+    numTries++;
+
+  } while (connOk == false && numTries <= 3);
+
+  if (connOk == true)
+  {
+    return result;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /**
@@ -343,16 +496,20 @@ int sendPacket(xUartPacket *pPacket)
     case 0:
       result[i] = write(portId, &pPacket->type, 1);
       break;
+
     case 1:
       result[i] = write(portId, &pPacket->instruction, 1);
       break;
+
     case 2:
       dataLengthSplit = (int8_t) pPacket->datalength;
       result[i] = write(portId, &dataLengthSplit, 1);
       break;
+
     case 3:
-      dataLengthSplit = (int8_t) (pPacket->datalength >> 8);
+      dataLengthSplit = (int8_t)(pPacket->datalength >> 8);
       result[i] = write(portId, &dataLengthSplit, 1);
+
     default:
       break;
     }
@@ -361,8 +518,11 @@ int sendPacket(xUartPacket *pPacket)
   /* Then data, if any */
   result[UART_PACKET_HEADER_SIZE] = write(portId, pPacket->data, pPacket->datalength);
 
+  /* Dont return until data is sent */
+  tcdrain(portId);
+
   /* check OK-ness */
-  for(i=0; i<(sizeof(result)/sizeof(int)); i++)
+  for (i=0; i< (sizeof(result) /sizeof(int)); i++)
   {
     if (result[i] == -1)
     {
@@ -384,7 +544,8 @@ int portOpen(struct termios *pOrigOptions)
 {
   struct termios newOptions;
 
-  int fd = open(deviceName, O_RDWR | O_NOCTTY | O_NDELAY);
+  int fd = open(deviceName, O_RDWR | O_NOCTTY | O_NONBLOCK);
+  usleep(250000);
 
   if (fd != -1)
   {
@@ -396,15 +557,20 @@ int portOpen(struct termios *pOrigOptions)
     newOptions.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
     newOptions.c_cflag &= ~(CSIZE | PARENB);
     newOptions.c_cflag |= CS8;
-    newOptions.c_cc[VMIN]  = 1;
+
+    newOptions.c_cc[VMIN]  = 0;
     newOptions.c_cc[VTIME] = 0;
 
-    tcflush(fd, TCIFLUSH);
 
     cfsetispeed(&newOptions, B115200);
     cfsetospeed(&newOptions, B115200);
     tcsetattr(fd, TCSANOW, &newOptions);
+
+    usleep(250000);
+
+    tcflush(fd, TCIOFLUSH);
   }
+
   return fd;
 }
 
@@ -413,7 +579,7 @@ int portOpen(struct termios *pOrigOptions)
  */
 void portClose(void)
 {
-  tcflush(portId, TCIFLUSH);
+  tcflush(portId, TCIOFLUSH);
   tcsetattr(portId, TCSANOW, &origOptions);
   close(portId);
 }
@@ -423,7 +589,6 @@ void portClose(void)
  */
 void sigIntHandler(int sig)
 {
-  printf("\nSIGINT caught. Closing port.\n");
   portClose();
   exit(sig);
 }
