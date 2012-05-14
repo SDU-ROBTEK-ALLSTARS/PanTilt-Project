@@ -50,6 +50,7 @@ extern void vPortSVCHandler(void);
 extern void spi_int_handler(void);
 extern void uart0_isr(void);
 extern void timer0_int_handler(void);
+extern void timer1_int_handler(void);
 
 //*****************************************************************************
 //
@@ -108,7 +109,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Watchdog timer
     timer0_int_handler,                     // Timer 0 subtimer A
     IntDefaultHandler,                      // Timer 0 subtimer B
-    IntDefaultHandler,                      // Timer 1 subtimer A
+    timer1_int_handler,                     // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
     IntDefaultHandler,                      // Timer 2 subtimer A
     IntDefaultHandler,                      // Timer 2 subtimer B
@@ -182,7 +183,6 @@ ResetISR(void)
           "        it      lt\n"
           "        strlt   r2, [r0], #4\n"
           "        blt     zero_loop");
-
     //
     // Call the application's entry point.
     //

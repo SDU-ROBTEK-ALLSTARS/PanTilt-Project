@@ -32,6 +32,7 @@
 #include "menu/menu.h"
 #include "control/control.h"
 #include "itc/parameter_updater.h"
+#include "stepresponse/stepresponse.h"
 
 #ifdef DEBUG
 #include "test/comm/spi_test.h"
@@ -60,21 +61,21 @@ int main(void)
   init_semaphores();
   init_queues();
 
-
   /* Module initialization */
   if (spi_init() &&
       uart_init_task() &&
       uart_protocol_init_task() &&
       status_led_task_init() &&
       uart_echo_init() &&
-      (xTaskCreate( dreh_task,     NAME("Dreh"),	 DEFAULT_STACK, NULL, PRIORITY_LOW,	  &task_handles[DREH_T]    )) == pdPASS &&
-      (xTaskCreate( lcd_task, 	 NAME("LCD"), 	 DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[LCD_T]     )) == pdPASS &&
-      (xTaskCreate( menu_task, 	 NAME("Menu"), 	 LARGE_STACK,   NULL, PRIORITY_LOW,   &task_handles[MENU_T]    )) == pdPASS &&
-      (xTaskCreate( numpad_task, 	 NAME("Numpad"), DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[NUMPAD_T]  )) == pdPASS &&
-      (xTaskCreate( control_task,	 NAME("Control"),DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T] )) == pdPASS &&
-      (xTaskCreate( blink_task,  	 NAME("Blink"),  DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T]   )) == pdPASS &&
+      par_updater_init() &&
+      (xTaskCreate(dreh_task,     NAME("Dreh"),    DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[DREH_T])) == pdPASS &&
+      (xTaskCreate(lcd_task,      NAME("LCD"),     DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[LCD_T])) == pdPASS &&
+      (xTaskCreate(menu_task,     NAME("Menu"),    LARGE_STACK,   NULL, PRIORITY_LOW,   &task_handles[MENU_T])) == pdPASS &&
+      (xTaskCreate(numpad_task,   NAME("Numpad"),  DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[NUMPAD_T])) == pdPASS &&
+      (xTaskCreate(control_task,  NAME("Control"), DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T])) == pdPASS &&
+      (xTaskCreate(blink_task,    NAME("Blink"),   DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T])) == pdPASS &&
       uart_to_spi_init() &&
-      par_updater_init()
+      step_response_init()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()
@@ -85,7 +86,7 @@ int main(void)
     vTaskStartScheduler();
   }
 
-  while(1)
+  while (1)
   {
     /* Will only get here if initialization went wrong. */
   }
@@ -102,10 +103,10 @@ void hardware_setup(void)
   uart_init_hw();
   status_led_init_hw();
   display_init();
-	init_leds();
-	init_dreh();
-	key_init();
-	init_adc();
+  init_leds();
+  init_dreh();
+  key_init();
+  init_adc();
   #ifdef DEBUG
   timer0_config_hw();
   #endif /* DEBUG */
@@ -113,13 +114,13 @@ void hardware_setup(void)
 
 void init_semaphores(void)
 {
-  sem_lcd_buffer 	= xSemaphoreCreateMutex();
+  sem_lcd_buffer  = xSemaphoreCreateMutex();
   sem_common_pins = xSemaphoreCreateMutex();
-  sem_queue 		= xSemaphoreCreateMutex();
-  sem_event 		= xSemaphoreCreateMutex();
-  sem_counter 	= xSemaphoreCreateMutex();
-  sem_state 		= xSemaphoreCreateMutex();
-  sem_parameter	= xSemaphoreCreateMutex();
+  sem_queue     = xSemaphoreCreateMutex();
+  sem_event     = xSemaphoreCreateMutex();
+  sem_counter   = xSemaphoreCreateMutex();
+  sem_state     = xSemaphoreCreateMutex();
+  sem_parameter = xSemaphoreCreateMutex();
 }
 
 void init_queues(void)

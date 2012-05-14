@@ -33,7 +33,7 @@
 	</tr>
 	<tr>
 		<td align="center">3</td>
-		<td align="center">&nbsp;</td>
+		<td align="center">Trigger step response</td>
 		<td align="center">&nbsp;</td>
 	</tr>
 	<tr>
