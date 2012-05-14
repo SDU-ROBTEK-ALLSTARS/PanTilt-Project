@@ -51,6 +51,9 @@ void uart_to_spi_task(void *param)
 {
   INT8U data;
 
+  /* Registers this task to use the SPI */
+  spi_register_task(NULL);
+
   while(1)
   {
     xQueueReceive(uart_to_spi_queue, &data, portMAX_DELAY);
@@ -63,7 +66,7 @@ void uart_to_spi_task(void *param)
 
 BOOLEAN uart_to_spi_init(void)
 {
-  if (xTaskCreate(uart_to_spi_task, (signed portCHAR *) "UART_-_SPI", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL) &&
+  if (xTaskCreate(uart_to_spi_task, (signed portCHAR *) "UART_-_SPI", configMINIMAL_STACK_SIZE, NULL, UART_TO_SPI_TASK_PRIORITY, NULL) &&
       (uart_to_spi_queue = xQueueCreate(8, sizeof(INT8U))) &&
       uart_protocol_register_handler(uart_to_spi_write, UART_TO_SPI_PACKET_TYPE, UART_TO_SPI_INSTRUCTION_NUM))
   {
