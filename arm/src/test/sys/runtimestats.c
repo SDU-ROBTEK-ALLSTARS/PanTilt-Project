@@ -1,5 +1,6 @@
 
 /* std libc */
+#include <stdlib.h>
 #include <string.h>
 
 /* FreeRTOS includes. */
@@ -44,13 +45,22 @@ void timer0_int_handler(void)
 void runtimestats_print(void)
 {
   char *buf;
-  buf = (char *) pvPortMalloc(uxTaskGetNumberOfTasks() * 40);
+
+  /* Allocate memory */
+  vTaskSuspendAll();
+  buf = (char *) calloc(uxTaskGetNumberOfTasks() * 40, sizeof(char));
+  xTaskResumeAll();
 
   if (buf != NULL)
   {
+    /* Get a runtime stats report and write it on the UART */
     vTaskGetRunTimeStats((signed char*) buf);
     uart_write((INT8U *) buf, strlen((char *) buf), portMAX_DELAY);
-    vPortFree(buf);
+
+    /* Free the memory again */
+    vTaskSuspendAll();
+    free(buf);
+    xTaskResumeAll();
   }
 }
 
