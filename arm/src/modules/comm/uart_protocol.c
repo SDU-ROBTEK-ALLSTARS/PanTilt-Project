@@ -112,7 +112,7 @@ void uart_protocol_task(void *parameters)
             /* If data is sent with the packet, it is expected to arrive a
              * relatively short while after the header, so we don't block
              * forever here. */
-            xQueueReceive(uart_queue_in, &packet.data[i], (portTickType)(portTICK_RATE_MS * 500));
+            xQueueReceive(uart_queue_in, &packet.data[i], (portTickType) (300 / portTICK_RATE_MS));
           }
         }
 
@@ -121,6 +121,10 @@ void uart_protocol_task(void *parameters)
          * or not. */
         (*command[packet.type][packet.instruction])(&packet);
       }
+    }
+    else
+    {
+      vTaskDelay((portTickType) (80 / portTICK_RATE_MS));
     }
   }
 }
