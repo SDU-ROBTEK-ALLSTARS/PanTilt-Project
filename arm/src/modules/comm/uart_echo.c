@@ -35,17 +35,9 @@
  */
 void uart_echo(uart_packet_t *p_packet)
 {
-  INT32U result;
-
   if (p_packet->datalength > 0)
   {
-    result = 0;
-
-    /* Keep trying to send until great succes is obtained */
-    while (result < p_packet->datalength)
-    {
-      result += uart_write((INT8U *) p_packet->data, ((INT32U) p_packet->datalength - result), (portTickType) 0xFF);
-    }
+    uart_write((INT8U *) p_packet->data, (INT32U) p_packet->datalength, portMAX_DELAY);
   }
 }
 
