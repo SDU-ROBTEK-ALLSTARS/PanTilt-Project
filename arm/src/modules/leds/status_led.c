@@ -26,7 +26,7 @@ void status_led_task(void *pvParameters)
   while(1)
   {
     GPIO_PORTF_DATA_R ^= 1;
-    vTaskDelay(250);
+    vTaskDelay(STATUS_LED_DELAY_TICKS);
   }
 }
 
