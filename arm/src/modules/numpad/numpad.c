@@ -106,7 +106,7 @@ void numpad_task(void *pvParameters)
 			}
 			break;
 		}
-		YIELD(10)
+		YIELD(YIELD_TIME_NUMPAD_T)
 	}
 }
 

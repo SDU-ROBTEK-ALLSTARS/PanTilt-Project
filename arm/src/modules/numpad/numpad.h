@@ -19,6 +19,7 @@
 
 /***************************** Include files *******************************/
 #include "os.h"
+#include "maindefs.h"
 #include "inc/lm3s6965.h"
 #include "glob_def.h"
 #include "emp_type.h"
