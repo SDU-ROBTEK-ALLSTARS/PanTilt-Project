@@ -61,35 +61,96 @@ void menu_task(void *pvParameters)
 		YIELD(YIELD_TIME_MENU_T)
 	}
 }
-
-menu_t* menu_handler(enum menu_names name)
+menu_t* menu_handler(INT8U handle)
 {
-	static menu_t menus[NUMBER_OF_MENUS];
+	static struct menu_struct *root;
+	struct menu_struct *iterator;
+	struct menu_struct dummy;
+	dummy.menu_handle = handle;
 
-	switch(menus[name].type)
+	//if first run
+	if(handle == FIRST_RUN)
 	{
-	case MENU:
-		state(PUSH,DREH_S,EVENT);
-		break;
-	case VIEW:
-		state(PUSH,DREH_S,EVENT);
-		break;
-	case INPUT:
-		state(PUSH,DREH_S,COUNT);
-		break;
-	case CALL:
-		state(PUSH,DREH_S,EVENT);
-		(*menus[name].function)();
-		break;
-	default:
-		state(PUSH,DREH_S,EVENT);
-		break;
+		root = pvPortMalloc( sizeof(menu_t) );
+		root->menu_handle = 0;
+		root->next_handle = 0;
 	}
+	else
+	{
 
-	display_buffer_clear_blink();
+		//search for the menu
+		for(iterator = root ; iterator->next_handle && iterator->menu_handle != dummy.menu_handle ; iterator = iterator->next_handle );
 
-	return &menus[name];
+		//if menu was not found
+		if(iterator->menu_handle != dummy.menu_handle)
+		{
+			//add to list
+			iterator->next_handle = pvPortMalloc( sizeof(menu_t) );
+			iterator = iterator->next_handle;
+			iterator->next_handle = 0;
+			iterator->menu_handle = handle;
+			iterator->type = NOT_DEFINED;
+		}
+		else
+		{
+
+			switch(iterator->type)
+			{
+			case MENU:
+				state(PUSH,DREH_S,EVENT);
+				break;
+			case VIEW:
+				state(PUSH,DREH_S,EVENT);
+				break;
+			case INPUT:
+				state(PUSH,DREH_S,COUNT);
+				break;
+			case CALL:
+				state(PUSH,DREH_S,EVENT);
+				(*iterator->function)();
+				break;
+			case NOT_DEFINED:
+				break;
+			default:
+				state(PUSH,DREH_S,EVENT);
+				break;
+			}
+
+			display_buffer_clear_blink();
+		}
+	}
+	return iterator;
 }
+
+
+//menu_t* menu_handler(enum menu_names name)
+//{
+//	static menu_t menus[NUMBER_OF_MENUS];
+//
+//	switch(menus[name].type)
+//	{
+//	case MENU:
+//		state(PUSH,DREH_S,EVENT);
+//		break;
+//	case VIEW:
+//		state(PUSH,DREH_S,EVENT);
+//		break;
+//	case INPUT:
+//		state(PUSH,DREH_S,COUNT);
+//		break;
+//	case CALL:
+//		state(PUSH,DREH_S,EVENT);
+//		(*menus[name].function)();
+//		break;
+//	default:
+//		state(PUSH,DREH_S,EVENT);
+//		break;
+//	}
+//
+//	display_buffer_clear_blink();
+//
+//	return &menus[name];
+//}
 
 menu_t* parse_dreh_event(menu_t* menu)
 {
@@ -127,17 +188,17 @@ INT32S parse_numpad(INT32S former_value)
 	input = queue(POP,NUMPAD_Q);
 	if(input)
 	{
-//		for(i = 0 ; i < NUMBER_OF_DIGITS ; i++)
-//			string[i] = 0;
+		//		for(i = 0 ; i < NUMBER_OF_DIGITS ; i++)
+		//			string[i] = 0;
 		number_to_string(string,former_value);
 
-//		while(input)
-//		{
-//			for(i = 0 ; i < NUMBER_OF_DIGITS - 1 ; i++)
-//				string[i] = string[i+1];
-//			string[NUMBER_OF_DIGITS - 1] = input;
-//			input = queue(POP,NUMPAD_Q);
-//		}
+		//		while(input)
+		//		{
+		//			for(i = 0 ; i < NUMBER_OF_DIGITS - 1 ; i++)
+		//				string[i] = string[i+1];
+		//			string[NUMBER_OF_DIGITS - 1] = input;
+		//			input = queue(POP,NUMPAD_Q);
+		//		}
 
 		former_value = string_to_number(string);
 
@@ -169,7 +230,7 @@ void number_to_string(char *array, INT32S number)
 	INT8U i = 4;
 
 	//go to the end of array
-//	for(i = 0 ; array[i] != 0 ; i++);
+	//	for(i = 0 ; array[i] != 0 ; i++);
 
 	do
 	{

@@ -67,7 +67,7 @@
 /***************************    Enumerations    ****************************/
 enum menu_names
 {
-	EMPTY,
+	FIRST_RUN,
 	MAIN_MENU,
 	SET_MENU,
 	SET_SUB_RETURN,
@@ -115,7 +115,8 @@ typedef struct field_struct
 
 typedef struct menu_struct
 {
-	enum menu_names name;				//name of menu
+	INT8U menu_handle;					//name of menu
+	struct menu_struct *next_handle;	//next menu in list
 	enum menu_types type;				//type of menu, following menu_types enumeration
 	const char *topline;				//top line of display
 	const char *bottomline;				//bottom line of display
@@ -150,7 +151,7 @@ void menu_task(void *pvParameters);
 *   Output   : 	pointer to new menu
 *   Function :  changes system state based on menu item
 *****************************************************************************/
-menu_t* menu_handler(enum menu_names name);
+menu_t* menu_handler(INT8U handler);
 
 
 /**************************** PARSE DREH EVENT *******************************
