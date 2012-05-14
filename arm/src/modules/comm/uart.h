@@ -1,9 +1,8 @@
-
 #ifndef UART_H
 #define UART_H
 
 #define UART_TASK_TRANSMIT_STACK_SIZE  configMINIMAL_STACK_SIZE
-#define UART_TASK_TRANSMIT_PRIORITY    (tskIDLE_PRIORITY)
+#define UART_TASK_TRANSMIT_PRIORITY    (tskIDLE_PRIORITY + 1)
 #define UART_QUEUE_OUT_SIZE            32
 #define UART_QUEUE_IN_SIZE             64
 
