@@ -64,9 +64,5 @@ begin
 							Inputnumber(14)));
 										  
    magnitude <= negative_mag or positive_mag or absolute_neg;
-
---MOCKUP IMPLEMENTATION, DOES NOT WORK WHEN GIVEN A NEGATIVE NUMBER REPLACE LATER
-	--sign <= Inputnumber(15);
-	--magnitude <= Inputnumber(14 downto 0);
 end Behavioral;
 

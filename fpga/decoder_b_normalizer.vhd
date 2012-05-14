@@ -40,26 +40,31 @@ entity decoder_b_normalizer is
 end decoder_b_normalizer;
 
 architecture Behavioral of decoder_b_normalizer is
-	constant bits_pr_rev : integer := 1076;
-	constant zero_position : STD_LOGIC_VECTOR(15 downto 0) := "1000000000000000";
+--	constant bits_pr_rev : integer := 1080;
+--	constant zero_position : STD_LOGIC_VECTOR(15 downto 0) := "1000000000000000";
 begin
-	process (clk,value,index)
-	begin
-		if rising_edge(clk) then
-			if	(value = bits_pr_rev+zero_position) then
-				reset_counter <= '1';
-			elsif (value = zero_position - bits_pr_rev) then
-				reset_counter <= '1';
-			else 
-				reset_counter <= '0';
-			end if;
-		end if;
-		if value >= zero_position then
-			normalized_value <= value;
-		else
-			normalized_value <= value + bits_pr_rev;
-		end if;
-	end process;
+--	process (clk,value,index)
+--	begin
+--		if rising_edge(clk) then
+--			if	(value = bits_pr_rev+zero_position) then
+--				reset_counter <= '1';
+--			elsif (value = zero_position - bits_pr_rev) then
+--				reset_counter <= '1';
+--			else 
+--				reset_counter <= '0';
+--			end if;
+--		end if;
+--		if value >= zero_position then
+--			normalized_value <= value;
+--		else
+--			normalized_value <= value + bits_pr_rev;
+--		end if;
+--	end process;
+	
+		--Dummy... for now
+	normalized_value <= value;
+	reset_counter <= '0';
+
 	
 end Behavioral;
 
