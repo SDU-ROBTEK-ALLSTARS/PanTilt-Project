@@ -13,7 +13,7 @@
 #define 	YIELD_TIME_DREH_T			10
 #define		YIELD_TIME_LCD_T			1
 #define 	YIELD_TIME_MENU_T			5
-#define 	YIELD_TIME_CONTROL_T		100
+#define 	YIELD_TIME_CONTROL_T		1
 #define		YIELD_TIME_BLINK_T			350
 
 enum task_handle_names
