@@ -28,6 +28,8 @@
 #define 	TRESHOLD 	10
 #define 	P_TERM 		30
 #define		P_TERM_PAN	5
+#define		PAN			0
+#define 	TILT		1
 
 #define  	PAN_FPGA_MAX		0x80D0
 #define		PAN_FPGA_MIN		0x7F20
