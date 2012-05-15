@@ -10,10 +10,10 @@
 #define 	PRIORITY_USER				(tskIDLE_PRIORITY + 1)
 #define		PRIORITY_LOW				(tskIDLE_PRIORITY)
 
-#define 	YIELD_TIME_DREH_T			50
+#define 	YIELD_TIME_DREH_T			40
 #define		YIELD_TIME_LCD_T			2
-#define 	YIELD_TIME_MENU_T			100
-#define 	YIELD_TIME_CONTROL_T		10
+#define 	YIELD_TIME_MENU_T			80
+#define 	YIELD_TIME_CONTROL_T		5
 #define		YIELD_TIME_BLINK_T			350
 #define		YIELD_TIME_NUMPAD_T			40
 
