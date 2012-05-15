@@ -8,7 +8,7 @@ xlnx_auto*
 _xmsgs
 xst
 vs2010app
-planAhead_run_1/
+planAhead_run*
 
 *.xdl
 *.wcfg
