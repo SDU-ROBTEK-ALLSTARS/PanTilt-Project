@@ -15,79 +15,52 @@
 /*****************************   Functions   *******************************/
 void control_task(void *pvParameters)
 {
-	INT32S input[2]; //0 = pan voltage, 1 = tilt voltage
-	INT32S setpoint[2]; //0 = wanted pan position, 1 = wanted tilt position
-	float feedback[2]; //0 = feedback from pan, 1 = feedback from tilt
-	INT32S error[2]; //setpoint - feedback
+	INT32S input[2];			//pwm range 5000 - 32000
+	INT32S setpoint[2];			//setpoint in degrees
+	float feedback[2]; 			//position in ticks
+	INT32S error[2]; 			//setpoint - feedback
 	portTickType xLastWakeTime;
 
 	//define frequency of task
-	const portTickType xFrequency = 100;
-
-	//setup initial system parameters
-	parameter(PUSH,PAN_SETPOINT_P,0);
-	parameter(PUSH,TILT_SETPOINT_P,0);
-	parameter(PUSH,PAN_PWM_P,0);
-	parameter(PUSH,TILT_PWM_P,0);
+	const portTickType xFrequency = 100;		//Hz
 
 	while( TRUE )
 	{
 		xLastWakeTime = xTaskGetTickCount();
 
-		//get parameters - TODO: implement as burst
-		setpoint[0] = parameter(POP,PAN_SETPOINT_P);
-		setpoint[1] = parameter(POP,TILT_SETPOINT_P);
+		//get parameters
+		setpoint[PAN] 	= parameter(POP,PAN_SETPOINT_P);
+		setpoint[TILT] 	= parameter(POP,TILT_SETPOINT_P);
 
-		feedback[0] = (float)parameter(POP,PAN_POSITION_P);
-		feedback[1] = (float)parameter(POP,TILT_POSITION_P);
+		feedback[PAN] 	= (float)parameter(POP,PAN_POSITION_P);
+		feedback[TILT] 	= (float)parameter(POP,TILT_POSITION_P);
 
-
-		//convert to human numbers
+		//convert feedback to degrees
 		conversions(feedback);
 
 		//calculate error
-		error[0] = setpoint[0] - feedback[0];
-		error[1] = 1800 + (setpoint[1] - feedback[1]);
+		error[PAN] = setpoint[PAN] - feedback[PAN];
+		error[TILT] = 1800 + (setpoint[TILT] - feedback[TILT]);
 
-		if(error[0] > 100)
-			input[0] = error[0]*P_TERM_PAN;
-		else if(error[0] < -100)
-			input[0] = error[0]*P_TERM_PAN;
+		if(error[PAN] > 100)
+			input[PAN] = error[PAN]*P_TERM_PAN;
+		else if(error[PAN] < -100)
+			input[PAN] = error[PAN]*P_TERM_PAN;
 		else
-			input[0] = 0;
+			input[PAN] = 0;
 
-		if(error[1] > 150)
-			input[1] = error[1]*P_TERM;
-		else if(error[1] < -150)
-			input[1] = error[1]*P_TERM;
+		if(error[TILT] > 150)
+			input[TILT] = error[TILT]*P_TERM;
+		else if(error[TILT] < -150)
+			input[TILT] = error[TILT]*P_TERM;
 		else
-			input[1] = 0;
+			input[TILT] = 0;
 
-		//calculate new inputs
-//		input[0] = (INT32S)( (error[0]*P_TERM));//* P_TERM;
-//		input[1] = (INT32S)( (error[1]*P_TERM));//* P_TERM;
-
-		//convert to pwm
-//		if(input[0] < FPGA_PWM_MIN)
-//			input[0] = FPGA_PWM_MIN;
-//		if(input[0] > FPGA_PWM_MAX)
-//			input[0] = FPGA_PWM_MAX;
-//
-//		if(input[1] < FPGA_PWM_MIN)
-//			input[1] = FPGA_PWM_MIN;
-//		if(input[1] > FPGA_PWM_MAX)
-//			input[1] = FPGA_PWM_MAX;
-
-//		parameter(PUSH,PAN_CURRENT_P,(INT32S)input[0]);
-//		parameter(PUSH,TILT_CURRENT_P,(INT32S)input[1]);
-
-//		parameter(PUSH,PAN_PWM_P,input[0]);
-		parameter(PUSH,TILT_PWM_P,input[1]);
-//		parameter(PUSH,TILT_PWM_P, -6000); // FIXME
-//		parameter(PUSH,PAN_PWM_P, 0);
+//		parameter(PUSH,PAN_PWM_P,input[PAN]);
+		parameter(PUSH,TILT_PWM_P,input[TILT]);
 
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
-//		YIELD(YIELD_TIME_CONTROL_T);
+
 	}
 }
 

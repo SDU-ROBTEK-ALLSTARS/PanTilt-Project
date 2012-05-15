@@ -22,6 +22,12 @@ void menu_task(void *pvParameters)
 	yellow_led( FALSE );
 	green_led( FALSE );
 
+	//setup initial system parameters
+	parameter(PUSH,PAN_SETPOINT_P,0);
+	parameter(PUSH,TILT_SETPOINT_P,0);
+	parameter(PUSH,PAN_PWM_P,0);
+	parameter(PUSH,TILT_PWM_P,0);
+
 	while(TRUE)
 	{
 		//handle inputs
