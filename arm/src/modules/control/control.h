@@ -25,22 +25,25 @@
 #include "maindefs.h"
 
 /*****************************   Constants   *******************************/
-#define 	TRESHOLD 	10
-#define 	P_TERM 		30
-#define		P_TERM_PAN	5
-#define		PAN			0
-#define 	TILT		1
+#define 	P_TERM 					20
+#define		TASK_FREQUENCY(x)		(configTICK_RATE_HZ/x)
+#define		PWM_MIN					5000
+#define		PWM_MAX					20000
 
-#define  	PAN_FPGA_MAX		0x80D0
-#define		PAN_FPGA_MIN		0x7F20
-#define		TILT_FPGA_MAX		0x0434
-#define		TILT_FPGA_MIN		0x0000
-#define 	FPGA_PWM_MAX		0x8000
-#define 	FPGA_PWM_MIN		0x7FFF
-#define		FPGA_PWM_CENTER		0x8000
-#define 	PAN_DEG_MAX			1800		//180.00 deg
-#define		TILT_DEG_MAX		3600		//360.00 deg
 
+#define 	TICKS_PR_REVOLUTION		0x0436
+#define		TICK_TO_DEGREE_FACTOR	360.0/TICKS_PR_REVOLUTION
+#define 	TICKS_ZERO				0x8000
+#define		TICKS_TO_DEGREES(x)		(x - TICKS_ZERO) * TICK_TO_DEGREE_FACTOR
+
+/*****************************   Enumerations   ****************************/
+enum
+{
+	PAN_POS,
+	TILT_POS,
+	PAN_VEL,
+	TILT_VEL
+};
 /************************   Function declarations   ************************/
 
 /*****************************************************************************
@@ -50,12 +53,6 @@
 ******************************************************************************/
 void control_task(void *pvParameters);
 
-/*****************************************************************************
-*   Input    :	feedback vector
-*   Output   :	-
-*   Function :	Converts feedback from FPGA
-******************************************************************************/
-void conversions(float *feedback);
 
 /****************************** End Of Module *******************************/
 #endif
