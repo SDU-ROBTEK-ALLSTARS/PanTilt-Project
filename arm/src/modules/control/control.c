@@ -1,10 +1,10 @@
 /*****************************************************************************
-* University of Southern Denmark
-* Robotics Engineering Spring 2012
-* Pan Tilt Project
-*
-* MODULENAME.: control
-*
+ * University of Southern Denmark
+ * Robotics Engineering Spring 2012
+ * Pan Tilt Project
+ *
+ * MODULENAME.: control
+ *
  *****************************************************************************/
 
 /***************************** Include files *******************************/
@@ -15,66 +15,63 @@
 /*****************************   Functions   *******************************/
 void control_task(void *pvParameters)
 {
-	INT32S input[2];			//pwm range 5000 - 32000
-	INT32S setpoint[2];			//setpoint in degrees
-	float feedback[2]; 			//position in ticks
-	INT32S error[2]; 			//setpoint - feedback
+	FP32 input[2];				//pwm range 5000 - 32000
+	FP32 setpoint[2];			//setpoint in degrees
+	FP32 feedback[2]; 			//position in ticks
+	FP32 error[2]; 				//setpoint - feedback
 	portTickType xLastWakeTime;
 
 	//define frequency of task
-	const portTickType xFrequency = 100;		//Hz
+	const portTickType xFrequency = TASK_FREQUENCY(100);		//frequency in Hz
 
 	while( TRUE )
 	{
+		//save counter value
 		xLastWakeTime = xTaskGetTickCount();
 
 		//get parameters
-		setpoint[PAN] 	= parameter(POP,PAN_SETPOINT_P);
-		setpoint[TILT] 	= parameter(POP,TILT_SETPOINT_P);
-
-		feedback[PAN] 	= (float)parameter(POP,PAN_POSITION_P);
-		feedback[TILT] 	= (float)parameter(POP,TILT_POSITION_P);
+		setpoint[PAN_POS] 	= (FP32)parameter(POP,PAN_SETPOINT_P);
+		setpoint[TILT_POS] 	= (FP32)parameter(POP,TILT_SETPOINT_P);
+		feedback[PAN_POS] 	= (FP32)parameter(POP,PAN_POSITION_P);
+		feedback[TILT_POS] 	= (FP32)parameter(POP,TILT_POSITION_P);
 
 		//convert feedback to degrees
-		conversions(feedback);
+		feedback[PAN_POS] 	= TICKS_TO_DEGREES(feedback[PAN_POS]);
+		feedback[TILT_POS] 	= TICKS_TO_DEGREES(feedback[TILT_POS]);
 
 		//calculate error
-		error[PAN] = setpoint[PAN] - feedback[PAN];
-		error[TILT] = 1800 + (setpoint[TILT] - feedback[TILT]);
+		error[PAN_POS] 		= setpoint[PAN_POS] - feedback[PAN_POS];
+		error[TILT_POS] 	= setpoint[TILT_POS] - feedback[TILT_POS];
 
-		if(error[PAN] > 100)
-			input[PAN] = error[PAN]*P_TERM_PAN;
-		else if(error[PAN] < -100)
-			input[PAN] = error[PAN]*P_TERM_PAN;
-		else
-			input[PAN] = 0;
+		//calculate inputs
+		input[PAN_POS] 		= error[PAN_POS] * P_TERM;
+		input[TILT_POS] 	= error[TILT_POS] * P_TERM;
 
-		if(error[TILT] > 150)
-			input[TILT] = error[TILT]*P_TERM;
-		else if(error[TILT] < -150)
-			input[TILT] = error[TILT]*P_TERM;
-		else
-			input[TILT] = 0;
+		//zero input if under min to save motors
+		if(input[PAN_POS] < PWM_MIN && input[PAN_POS] > -PWM_MIN)
+			input[PAN_POS] 	= 0;
+		if(input[TILT_POS] < PWM_MIN && input[TILT_POS] > -PWM_MIN)
+			input[TILT_POS] = 0;
 
-//		parameter(PUSH,PAN_PWM_P,input[PAN]);
-		parameter(PUSH,TILT_PWM_P,input[TILT]);
+		//reduce input to max
+		if(input[PAN_POS] > PWM_MAX)
+			input[PAN_POS] = PWM_MAX;
+		else if (input[PAN_POS] < -PWM_MAX)
+			input[PAN_POS] = -PWM_MAX;
+		if(input[TILT_POS] > PWM_MAX)
+			input[TILT_POS] = PWM_MAX;
+		else if (input[TILT_POS] < -PWM_MAX)
+			input[TILT_POS] = -PWM_MAX;
 
-		vTaskDelayUntil( &xLastWakeTime, xFrequency );
-
-	}
-}
-
-void conversions(float *feedback)
-{
-	feedback[0] -= 0x8000;
-  	feedback[1] -= 0x8000;
-
-  	feedback[0] *= 3.34f;
-  	feedback[1] *= 3.34f;
-
-	//update current angles
+		//update parameters
+//		parameter(PUSH,TILT_PWM_P,(INT32S)input[PAN_POS]);
+		parameter(PUSH,TILT_PWM_P,(INT32S)input[TILT_POS]);
 		parameter(PUSH,PAN_CURRENT_P,(INT32S)feedback[0]);
 		parameter(PUSH,TILT_CURRENT_P,(INT32S)feedback[1]);
+
+		//yield
+		vTaskDelayUntil( &xLastWakeTime, xFrequency );
+	}
 }
 
 /****************************** End Of Module *******************************/

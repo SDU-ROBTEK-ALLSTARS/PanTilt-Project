@@ -27,8 +27,8 @@ TILT_PWM_P
 ADDRESS_POS_A
 16 bit unsigned
 0x8000 = @hall-sensor
-0x???? = pan max
-0x???? = pan min
+0x80D0 = pan max
+0x7F20 = pan min
 
 PAN_POS_P
 32 bit signed
