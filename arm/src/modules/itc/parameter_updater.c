@@ -33,10 +33,10 @@ void param_updater_task(void *params)
                          ADDRESS_POS_A_MSB, ADDRESS_POS_A_LSB,
                          ADDRESS_POS_B_MSB, ADDRESS_POS_B_LSB,
                          ADDRESS_VEL_A_MSB, ADDRESS_VEL_A_LSB,
-                         ADDRESS_VEL_B_MSB, ADDRESS_VEL_B_LSB
-                         /*(ADDRESS_AUX_FROM_ARM | 0x80), ADDRESS_AUX_TO_ARM,
-                         0x00*/};
-  INT8U readBuf[sizeof(transmitBuf)];
+                         ADDRESS_VEL_B_MSB, ADDRESS_VEL_B_LSB,
+                         /*(ADDRESS_AUX_FROM_ARM | 0x80), ADDRESS_AUX_TO_ARM,*/
+                         0x00}; /* The 0x00 bytes sent are dummies */
+  INT8U readBuf[sizeof(transmitBuf)]; /* The first byte returned is not used. */
   INT32S temp;
 
   /* Registers this task to use the SPI */
@@ -71,11 +71,11 @@ void param_updater_task(void *params)
     /* Update "our" values with the updated ones from the FPGA */
     parameter(PUSH, PAN_POSITION_P, (INT32S) ((readBuf[9] << 8) | readBuf[10]));
     parameter(PUSH, TILT_POSITION_P, (INT32S) ((readBuf[11] << 8) | readBuf[12]));
-
-
-    /* TODO
     parameter(PUSH, PAN_VELOCITY_P, (INT32S) ((readBuf[13] << 8) | readBuf[14]));
     parameter(PUSH, TILT_VELOCITY_P, (INT32S) ((readBuf[15] << 8) | readBuf[16]));
+
+    /* TODO
+
 	  parameter(PUSH, FREE_P, (INT32S) readBuf[]);
 	  */
 
