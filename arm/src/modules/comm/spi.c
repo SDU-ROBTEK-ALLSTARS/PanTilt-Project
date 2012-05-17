@@ -33,7 +33,8 @@
  *
  * TODO:
  *
- * - Documentation
+ * - BUG: When sending an array larger than SPI_PUBLIC_QUEUE_SIZE, the
+ *   sofware sometimes crashes!
  *
  * - ISR speed optimization (write directly to hardware)
  *
