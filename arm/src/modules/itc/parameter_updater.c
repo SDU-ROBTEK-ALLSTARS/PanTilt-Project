@@ -11,6 +11,7 @@
 #include "comm/spi.h"
 #include "itc/itc.h"
 #include "fpga_registers.h"
+#include "watchdog/watchdog.h"
 
 /* This modules header */
 #include "parameter_updater.h"
@@ -79,6 +80,7 @@ void param_updater_task(void *params)
 	  parameter(PUSH, FREE_P, (INT32S) readBuf[]);
 	  */
 
+    wd_kick_from_task(); /* Kick the dog to let it know the task is running */
     vTaskDelay(PAR_UPDATER_TASK_FREQUENCY);
   }
 }

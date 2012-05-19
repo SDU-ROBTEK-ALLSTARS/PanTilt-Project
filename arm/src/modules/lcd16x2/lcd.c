@@ -9,6 +9,7 @@
 
 /***************************** Include files *******************************/
 #include "lcd.h"
+#include "watchdog/watchdog.h"
 
 /*****************************   Variables   *******************************/
 LCD_BUFFER	display_buffer[COL_SIZE][ROW_SIZE];
@@ -65,6 +66,7 @@ void lcd_task(void *pvParameters)
 		}
 		while (!display_updated);
 
+    wd_kick_from_task(); /* Kick the dog to let it know the task is running */
 		YIELD(YIELD_TIME_LCD_T)
 	}
 }
@@ -142,7 +144,7 @@ BOOLEAN display_buffer_write_string(INT8U col_p, INT8U row_p, const char *str)
 		}
 	}
 
-	return return_value; 
+	return return_value;
 }
 BOOLEAN display_buffer_write_number(INT8U col_p,INT8U row_p,INT8S digits,INT32U num)
 {
@@ -229,7 +231,7 @@ BOOLEAN display_buffer_write_decimal(INT8U col_p,INT8U row_p,INT8S digits,INT8U 
 
 BOOLEAN lcd_function(INT8U function)
 {
-	BOOLEAN	return_value = TRUE;  
+	BOOLEAN	return_value = TRUE;
 	{
 		lcd_rs_low();
 		lcd_write_4bit_mode(function);

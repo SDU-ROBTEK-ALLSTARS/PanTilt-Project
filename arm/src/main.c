@@ -33,6 +33,7 @@
 #include "control/control.h"
 #include "itc/parameter_updater.h"
 #include "stepresponse/stepresponse.h"
+#include "watchdog/watchdog.h"
 
 #ifdef DEBUG
 #include "test/comm/spi_test.h"
@@ -75,14 +76,14 @@ int main(void)
       (xTaskCreate(control_task,  NAME("Control"), DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T])) == pdPASS &&
       (xTaskCreate(blink_task,    NAME("Blink"),   DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T])) == pdPASS &&
       uart_to_spi_init() &&
-      step_response_init()
+      step_response_init() &&
+      wd_init()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()
       #endif /* DEBUG */
      )
   {
-    IntMasterEnable();
     vTaskStartScheduler();
   }
 

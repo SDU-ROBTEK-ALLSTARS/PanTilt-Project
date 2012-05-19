@@ -55,6 +55,7 @@ SOURCE =\
 	$(MODULES_DIR)/numpad/numpad.c \
 	$(MODULES_DIR)/utils/itoa.c \
 	$(MODULES_DIR)/stepresponse/stepresponse.c \
+	$(MODULES_DIR)/watchdog/watchdog.c \
 	$(TEST_DIR)/comm/spi_test.c \
 	$(TEST_DIR)/sys/runtimestats.c \
 	$(RTOS_SOURCE_DIR)/list.c \

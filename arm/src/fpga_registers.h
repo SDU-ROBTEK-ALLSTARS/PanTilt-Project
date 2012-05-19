@@ -23,4 +23,9 @@
 #define ADDRESS_AUX_TO_ARM    0x0F
 
 
+/* AUX register bit positions */
+#define AUX_REG_WATCHDOG_BIT_0  4
+#define AUX_REG_WATCHDOG_BIT_1  5
+
+
 #endif /* FPGA_REGISTERS_H_ */

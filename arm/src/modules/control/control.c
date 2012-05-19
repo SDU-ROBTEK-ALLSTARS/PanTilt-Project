@@ -9,6 +9,7 @@
 
 /***************************** Include files *******************************/
 #include "control.h"
+#include "watchdog/watchdog.h"
 
 /*****************************   Varables   *******************************/
 
@@ -70,6 +71,7 @@ void control_task(void *pvParameters)
 		parameter(PUSH,TILT_CURRENT_P,(INT32S)feedback[1]);
 
 		//yield
+		wd_kick_from_task(); /* Kick the dog to let it know the task is running */
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
 	}
 }

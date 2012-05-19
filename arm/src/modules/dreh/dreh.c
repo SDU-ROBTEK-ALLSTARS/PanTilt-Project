@@ -11,6 +11,7 @@
 #include "inc/hw_types.h"
 #include "driverlib/sysctl.h"
 #include "dreh.h"
+#include "watchdog/watchdog.h"
 
 /***********************   Function implementations   **********************/
 void dreh_task(void *pvParameters)
@@ -84,6 +85,7 @@ void dreh_task(void *pvParameters)
 		old_A = new_A;
 		/* old_B = new_B; KIM fixes "warning: variable 'old_B' set but not used [-Wunused-but-set-variable]" */
 
+    wd_kick_from_task(); /* Kick the dog to let it know the task is running */
 		YIELD(YIELD_TIME_DREH_T)
 	}
 }

@@ -51,6 +51,7 @@ extern void spi_int_handler(void);
 extern void uart0_isr(void);
 extern void timer0_int_handler(void);
 extern void timer1_int_handler(void);
+extern void wd_int_handler(void);
 
 //*****************************************************************************
 //
@@ -106,7 +107,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 1
     IntDefaultHandler,                      // ADC Sequence 2
     IntDefaultHandler,                      // ADC Sequence 3
-    IntDefaultHandler,                      // Watchdog timer
+    wd_int_handler,                         // Watchdog timer
     timer0_int_handler,                     // Timer 0 subtimer A
     IntDefaultHandler,                      // Timer 0 subtimer B
     timer1_int_handler,                     // Timer 1 subtimer A

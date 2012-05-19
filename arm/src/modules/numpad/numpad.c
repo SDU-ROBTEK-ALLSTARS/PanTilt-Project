@@ -8,6 +8,8 @@
 /***************************** Include files *******************************/
 #include "inc/hw_types.h"
 #include "driverlib/sysctl.h"
+#include "emp_type.h"
+#include "watchdog/watchdog.h"
 #include "numpad.h"
 
 /*****************************    Defines    *******************************/
@@ -106,6 +108,8 @@ void numpad_task(void *pvParameters)
 			}
 			break;
 		}
+
+		wd_kick_from_task(); /* Kick the dog to let it know the task is running */
 		YIELD(YIELD_TIME_NUMPAD_T)
 	}
 }
