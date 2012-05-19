@@ -34,9 +34,11 @@ INT32S parameter(enum data_commands command,enum parameter_handles name, ...)
 			break;
 		case ADD:
 			parameters[name] += va_arg(argument,signed long);
+			out = parameters[name];
 			break;
 		case SUB:
 			parameters[name] -= va_arg(argument,signed long);
+			out = parameters[name];
 			break;
 		case ADD_POS:
 			parameters[name] += va_arg(argument,signed long);
@@ -51,53 +53,6 @@ INT32S parameter(enum data_commands command,enum parameter_handles name, ...)
 	return out;
 }
 
-INT8U queue(enum data_commands command, enum queue_handles name, ...)
-{
-	static INT8U queue[NUMBER_OF_QUEUES][QUEUE_SIZE];
-	static INT8U next_in = 0;
-	static INT8U next_out = 0;
-	INT8U i,out = 0;
-	va_list argument;
-	va_start(argument,name);
-
-	TEST_SEM_QUEUE
-	{
-		switch(command)
-		{
-		case PUSH:
-			if(!queue[name][next_in])				//prevent from overwriting non-popped
-			{
-				queue[name][next_in] = (INT8U)va_arg(argument,int);
-				next_in++;
-				if(next_in >= QUEUE_SIZE)
-					next_in = 0;
-			}
-			break;
-		case POP:
-			if(queue[name][next_out])				//prevent from popping non-pushed
-			{
-				out = queue[name][next_out];
-				queue[name][next_out] = 0;
-				next_out++;
-				if(next_out >= QUEUE_SIZE)
-					next_out = 0;
-			}
-			break;
-		case FLUSH:
-			for(i = 0 ; i < QUEUE_SIZE ; i++)
-				queue[name][i] = 0;
-			break;
-		case PEEK:
-			out = queue[name][next_out];
-			break;
-		default:
-			break;
-
-		}
-		GIVE_SEM_QUEUE
-	}
-	return out;
-}
 
 INT8U event(enum data_commands command,enum event_handles name, ...)
 {
@@ -116,6 +71,9 @@ INT8U event(enum data_commands command,enum event_handles name, ...)
 		case POP:
 			out = events[name];
 			events[name] = 0;
+			break;
+		case PEEK:
+			out = events[name];
 			break;
 		default:
 			break;
@@ -194,6 +152,32 @@ INT8U state(enum data_commands command,enum state_handles name, ...)
 		GIVE_SEM_STATE
 	}
 	return out;
+}
+
+void position(enum data_commands command, INT8U number,...)
+{
+	static struct position_struct positions[NUMBER_OF_POSITIONS];
+
+	va_list argument;
+	va_start(argument,number);
+
+	switch(command)
+		{
+		case SAVE:
+			if(number >= 0 && number < NUMBER_OF_POSITIONS)
+			positions[number].pan = parameter(POP,PAN_CURRENT_P);
+			positions[number].tilt = parameter(POP,TILT_CURRENT_P);
+			break;
+
+		case GOTO:
+			parameter(PUSH,PAN_SETPOINT_P,positions[number].pan);
+			parameter(PUSH,TILT_SETPOINT_P,positions[number].tilt);
+			break;
+
+		default:
+			break;
+		}
+
 }
 
 /*

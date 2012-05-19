@@ -71,6 +71,7 @@ void lcd_task(void *pvParameters)
 
 void blink_task(void *pvParameters)
 {
+
 	while(TRUE)
 	{
 		state(TOGGLE,BLINK_S);
