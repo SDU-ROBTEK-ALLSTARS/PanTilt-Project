@@ -29,7 +29,7 @@
 	<tr>
 		<td align="center">2</td>
 		<td align="center">Write data from UART to SPI</td>
-		<td align="center">&nbsp;</td>
+		<td align="center">Print PWM, POS and VEL parameters</td>
 	</tr>
 	<tr>
 		<td align="center">3</td>

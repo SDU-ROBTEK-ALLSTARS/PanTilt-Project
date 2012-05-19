@@ -137,4 +137,6 @@ INT16S counter(INT8U command,INT8U name,...);
 *****************************************************************************/
 INT8U state(INT8U command,	INT8U name,...);
 
+BOOLEAN itc_init_uartprinter(void);
+
 #endif /*_DATA_H*/

@@ -9,6 +9,10 @@
 /***************************** Include files *******************************/
 #include "itc.h"
 #include <stdarg.h>
+#include <string.h>
+#include "comm/uart.h"
+#include "comm/uart_protocol.h"
+#include "utils/itoa.h"
 
 /*****************************   Functions   *******************************/
 INT32S parameter(enum data_commands command,enum parameter_handles name, ...)
@@ -190,4 +194,43 @@ INT8U state(enum data_commands command,enum state_handles name, ...)
 		GIVE_SEM_STATE
 	}
 	return out;
+}
+
+/*
+ * Prints a report of the current value of the parameters saved in memory.
+ *
+ * TODO: Would benefit from a printf function
+ */
+void print_parameters_on_uart(uart_packet_t *packet)
+{
+  char number[12] = {0};
+
+  uart_write((INT8U *) "PAN PWM:\t", 9, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, PAN_PWM_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+
+  uart_write((INT8U *) "TILT PWM:\t", 10, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, TILT_PWM_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+
+  uart_write((INT8U *) "PAN POS:\t", 9, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, PAN_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+
+  uart_write((INT8U *) "TILT POS:\t", 10, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, TILT_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+
+  uart_write((INT8U *) "PAN VEL:\t", 9, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, PAN_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+
+  uart_write((INT8U *) "TILT VEL:\t", 10, portMAX_DELAY);
+  uart_write((INT8U *) itoa((int) parameter(POP, TILT_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
+  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+}
+
+BOOLEAN itc_init_uartprinter(void)
+{
+  return uart_protocol_register_handler(&print_parameters_on_uart, UART_PACKET_TYPE_GET, 2);
 }

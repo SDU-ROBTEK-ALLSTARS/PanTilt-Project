@@ -75,14 +75,14 @@ int main(void)
       (xTaskCreate(control_task,  NAME("Control"), DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T])) == pdPASS &&
       (xTaskCreate(blink_task,    NAME("Blink"),   DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T])) == pdPASS &&
       uart_to_spi_init() &&
-      step_response_init()
+      step_response_init() &&
+      itc_init_uartprinter()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()
       #endif /* DEBUG */
      )
   {
-    IntMasterEnable();
     vTaskStartScheduler();
   }
 
@@ -116,11 +116,11 @@ void init_semaphores(void)
 {
   sem_lcd_buffer  = xSemaphoreCreateMutex();
   sem_common_pins = xSemaphoreCreateMutex();
-  sem_queue     = xSemaphoreCreateMutex();
-  sem_event     = xSemaphoreCreateMutex();
-  sem_counter   = xSemaphoreCreateMutex();
-  sem_state     = xSemaphoreCreateMutex();
-  sem_parameter = xSemaphoreCreateMutex();
+  sem_queue       = xSemaphoreCreateMutex();
+  sem_event       = xSemaphoreCreateMutex();
+  sem_counter     = xSemaphoreCreateMutex();
+  sem_state       = xSemaphoreCreateMutex();
+  sem_parameter   = xSemaphoreCreateMutex();
 }
 
 void init_queues(void)

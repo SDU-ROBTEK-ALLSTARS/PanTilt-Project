@@ -37,6 +37,7 @@ int longEchoTest(int num_packets);
 void requestRuntimeStats(void);
 void sendToSPI(void);
 void getStepResponse(int numMeasurements, int loggerTaskDelayMs);
+int sendDatalessPacket(int8_t type, int8_t instruction);
 
 static const char *deviceName;
 static int portId;
@@ -73,13 +74,14 @@ int main(int argc, char *argv[])
     while (run == true)
     {
       printf("\nSelect option:\n");
-      printf(" 1)\tPrint run-time stats\n");
-      printf(" 2)\tSend to SPI\n");
-      printf(" 3)\tStep response\n");
+      printf(" 1)\tPrint run-time stats.\n");
+      printf(" 2)\tSend to SPI.\n");
+      printf(" 3)\tStep response.\n");
       printf(" 4)\tListen!\n");
-      printf(" 6)\tRun SPI test\n");
-      printf(" 7)\tLong echo test\n");
-      printf(" 0)\tExit\n");
+      printf(" 5)\tPrint parameters.\n");
+      printf(" 6)\tRun SPI test.\n");
+      printf(" 7)\tLong echo test.\n");
+      printf(" 0)\tExit.\n");
 
       /* Get input char from stdin (ignore newline) */
       while ((input = fgetc(stdin)) == '\n') {}
@@ -107,6 +109,16 @@ int main(int argc, char *argv[])
         break;
 
       case '5':
+        result = sendDatalessPacket(UART_PACKET_TYPE_GET, 2);
+        if (result > 0)
+        {
+          listen(3, "%c");
+        }
+        else
+        {
+          printf("Error sending packet.\n");
+        }
+
         break;
 
       case '6':
@@ -302,6 +314,17 @@ void requestRuntimeStats(void)
   packet.datalength = 0;
 
   sendPacket(&packet);
+}
+
+int sendDatalessPacket(int8_t type, int8_t instruction)
+{
+  xUartPacket packet;
+
+  packet.type = type;
+  packet.instruction = instruction;
+  packet.datalength = 0;
+
+  return sendPacket(&packet);
 }
 
 void triggerSPITest(int8_t num_loops)
