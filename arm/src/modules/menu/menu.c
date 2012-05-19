@@ -189,16 +189,12 @@ INT32S power_of_ten(INT8U operand)
 
 void enter_freemode(void)
 {
-	red_led( FALSE );
-	yellow_led( FALSE );
-	green_led( TRUE );
+	state(PUSH,FREE_MODE_S,TRUE);
 }
 
 void exit_freemode(void)
 {
-	red_led( FALSE );
-	yellow_led( FALSE );
-	green_led( FALSE );
+	state(PUSH,FREE_MODE_S,FALSE);
 }
 void activate_regulator(void)
 {
