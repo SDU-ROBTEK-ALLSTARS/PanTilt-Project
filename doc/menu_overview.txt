@@ -1,0 +1,20 @@
+CURRENT POSITION
+P:      T:      
+
+<****  SET  ****
+POS   FREE  AUTO
+
+PRES DREH TO    
+STEP TILT MOTOR 
+
+PRES DREH TO    
+END STEP        
+
+*  STEP ENDED  *
+  PRESS TO EXIT 
+  
+<*FREE       STO
+P:      T:      
+
+THIS FEATURE IS 
+NOT IMPLEMENTED 

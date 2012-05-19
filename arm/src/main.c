@@ -1,3 +1,29 @@
+/**************************************************************************
+ * University of Southern Denmark
+ * Pan Tilt Project
+ *
+ * MODULENAME.: main
+ **************************************************************************/
+
+/**************************   Change Log   ********************************
+ * Date    Id    Change
+ * YYMMDD
+ * --------------------
+ * 120411  LBL   Module created
+ *
+ **************************************************************************/
+
+/*************************** Description **********************************
+ *usage:	Facilitating the L3S6569 to control a setup of a pan-tilt
+ *			connected via an SPI controller build in FPGA.
+ *
+ *To-do:	* Implement state-space controller algorithm
+ *			* Implement changing between controlles
+ *			* Implement free-mode
+ *
+ **************************************************************************/
+/***************************** Include files *******************************/
+
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
