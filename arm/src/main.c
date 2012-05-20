@@ -125,7 +125,7 @@ void hardware_setup(void)
   /* Drive at 50MHz crystal clock */
   SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_8MHZ);
   SysCtlDelay(3);
-  spi_config_hw();
+
   uart_init_hw();
   status_led_init_hw();
   display_init();

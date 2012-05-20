@@ -10,7 +10,6 @@
 #define SPI_INTERN_QUEUE_IN_SIZE   32
 #define SPI_PUBLIC_QUEUE_SIZE      32
 
-void spi_config_hw(void);
 BOOLEAN spi_init(void);
 BOOLEAN spi_register_task(xTaskHandle taskhandle);
 INT32S spi_write_from_task(const INT8U *buf, INT32U nbytes, portTickType ticks_to_block);
