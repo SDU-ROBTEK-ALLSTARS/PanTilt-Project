@@ -64,14 +64,24 @@ void control_task(void *pvParameters)
 			integral[TILT] = -INTEGRAL_MAX;
 
 		//calculate inputs
-		input[PAN] 		= (error[PAN] * PAN_P_TERM) + (integral[PAN] * I_TERM);// + (derivative[PAN] * D_TERM);
-		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * I_TERM);// + (derivative[TILT] * D_TERM);
+		input[PAN] 		= (error[PAN] * PAN_P_TERM);// (integral[PAN] * I_TERM);// + (derivative[PAN] * D_TERM);
+		input[TILT] 	= (error[TILT] * TILT_P_TERM);// (integral[TILT] * I_TERM);// + (derivative[TILT] * D_TERM);
 
-		//zero input if under min to save motors
-		if(input[PAN] < PWM_MIN && input[PAN] > -PWM_MIN)
+		//zero input if inside treshold
+		if(input[PAN] < TRESHOLD && input[PAN] > -TRESHOLD)
 			input[PAN] 	= 0;
-		if(input[TILT] < PWM_MIN && input[TILT] > -PWM_MIN)
+		if(input[TILT] < TRESHOLD && input[TILT] > -TRESHOLD)
 			input[TILT] = 0;
+
+		//bias
+		if(input[PAN] > 0 )
+			input[PAN] += 4000;
+		else if(input[PAN] < 0 )
+			input[PAN] -= 4000;
+		if(input[TILT] > 0 )
+			input[TILT] += 4000;
+		else if(input[TILT] < 0 )
+			input[TILT] -= 4000;
 
 		//reduce input to max
 		if(input[PAN] > PWM_MAX)
