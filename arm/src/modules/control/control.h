@@ -25,18 +25,19 @@
 #include "maindefs.h"
 
 /*****************************   Constants   *******************************/
-#define 	PAN_P_TERM 				40
-#define 	TILT_P_TERM 			20
-#define 	I_TERM 					1
+#define 	PAN_P_TERM 				4
+#define 	TILT_P_TERM 			2
+#define 	I_TERM 					0
 #define 	D_TERM 					0
 #define 	TICK_PERIOD				1/configTICK_RATE_HZ
-#define 	INTEGRAL_MAX			7000
+#define 	INTEGRAL_MAX			1000
 
 #define		TASK_FREQUENCY			FREQUENCY(100) //frequency in Hz
 #define		TASK_PERIOD				1/TASK_FREQUENCY
 #define		FREQUENCY(x)			(configTICK_RATE_HZ/x)
 #define		PWM_MIN					5000
 #define		PWM_MAX					20000
+#define		TRESHOLD				50
 
 #define 	TICKS_PR_REVOLUTION		12*30*3 		//ticks pr motor revolution * gear ratio * belt ratio
 #define		TICK_TO_DEGREE_FACTOR	3.34f
