@@ -27,11 +27,24 @@ void menu_task(void *pvParameters)
 	parameter(PUSH,TILT_SETPOINT_P,0);
 	parameter(PUSH,PAN_PWM_P,0);
 	parameter(PUSH,TILT_PWM_P,0);
+
 	parameter(PUSH,NEXT_POS_P,0);
+	parameter(PUSH,SAVE_POS_P,0);
+
+	position(NEW,0);
+	parameter(PUSH,PAN_CURRENT_P,300);
+	parameter(PUSH,TILT_CURRENT_P,900);
+	position(SAVE,1);
+	parameter(PUSH,PAN_CURRENT_P,-400);
+	parameter(PUSH,TILT_CURRENT_P,-1000);
+	position(SAVE,2);
 	parameter(PUSH,PAN_CURRENT_P,0);
 	parameter(PUSH,TILT_CURRENT_P,0);
 
-	vTaskSuspend( task_handles[CONTROL_T] );
+
+	exit_freemode();
+	deactivate_regulator();
+	deactivate_automode();
 
 	while(TRUE)
 	{
@@ -189,6 +202,7 @@ INT32S power_of_ten(INT8U operand)
 
 void enter_freemode(void)
 {
+	deactivate_automode();
 	state(PUSH,FREE_MODE_S,TRUE);
 }
 
@@ -230,7 +244,7 @@ void activate_pid(void)
 
 void save_position(void)
 {
-	position(SAVE,	parameter(POP,NEXT_POS_P));
+	position(SAVE,	parameter(POP,SAVE_POS_P));
 }
 
 

@@ -19,7 +19,8 @@ void control_task(void *pvParameters)
 	FP32 setpoint[2];			//format 90.0 degrees = 900
 	FP32 feedback[2]; 			//position in ticks
 	FP32 error[2]; 				//setpoint - feedback
-	FP32 old_error[2],integral[2],derivative[2],delta_time;
+	FP32 old_error[2],integral[2],derivative[2];
+	FP32 goal = 0;
 	portTickType wake_time,last_time;
 	const portTickType frequency = TASK_FREQUENCY;
 
@@ -38,20 +39,43 @@ void control_task(void *pvParameters)
 		feedback[PAN] 	= TICKS_TO_DEGREES(feedback[PAN]);		//new format 90.0 degrees = 900
 		feedback[TILT] 	= TICKS_TO_DEGREES(feedback[TILT]);		//new format 90.0 degrees = 900
 
-		//calculate time period
-		delta_time = TICK_PERIOD;//(wake_time - last_time) * TICK_PERIOD;
-
 		//calculate error
 		error[PAN] 		= setpoint[PAN] - feedback[PAN];	//format 90.0 degrees = 900
 		error[TILT] 	= setpoint[TILT] - feedback[TILT];	//format 90.0 degrees = 900
 
+		//check if goal was reached
+		if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
+			goal++;
+
+		//if in automode and setpoint was reached, change position
+		if(state(POP,AUTO_MODE_S) && goal > HOLD_ON_GOAL)
+		{
+			//if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
+//			if(counter(POP,TIME_C) > 5)
+//			if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
+//			{
+				goal = 0;
+				counter(RESET,TIME_C);
+				if(parameter(ADD,NEXT_POS_P,1) > NUMBER_OF_POSITIONS)
+					parameter(PUSH,NEXT_POS_P,0);
+				position(GOTO,parameter(POP,NEXT_POS_P));
+//			}
+		}
+
 		//calculate derivatives
-		derivative[PAN] = (error[PAN] - old_error[PAN]) / delta_time;
-		derivative[TILT] = (error[TILT] - old_error[TILT]) / delta_time;
+		derivative[PAN] = (error[PAN] - old_error[PAN]);// / delta_time;
+		derivative[TILT] = (error[TILT] - old_error[TILT]);// / delta_time;
 
 		//calculate integrals
-		integral[PAN] += (error[PAN]);// * delta_time);
-		integral[TILT] += (error[TILT]);// * delta_time);
+		if(error[PAN] < TRESHOLD && error[PAN] > -TRESHOLD)
+			integral[PAN] = 0;
+		else
+			integral[PAN] += (error[PAN]);// * delta_time);
+
+		if(error[TILT] < TRESHOLD && error[TILT] > -TRESHOLD)
+			integral[TILT] = 0;
+		else
+			integral[TILT] += (error[TILT]);// * delta_time);
 
 		//check for integral saturation
 		if(integral[PAN] > INTEGRAL_MAX)
@@ -64,8 +88,8 @@ void control_task(void *pvParameters)
 			integral[TILT] = -INTEGRAL_MAX;
 
 		//calculate inputs
-		input[PAN] 		= (error[PAN] * PAN_P_TERM);// (integral[PAN] * I_TERM);// + (derivative[PAN] * D_TERM);
-		input[TILT] 	= (error[TILT] * TILT_P_TERM);// (integral[TILT] * I_TERM);// + (derivative[TILT] * D_TERM);
+		input[PAN] 		= (error[PAN] * PAN_P_TERM)  + (integral[PAN] * I_TERM) + (derivative[PAN] * D_TERM);
+		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * I_TERM) + (derivative[TILT] * D_TERM);
 
 		//zero input if inside treshold
 		if(input[PAN] < TRESHOLD && input[PAN] > -TRESHOLD)
@@ -75,13 +99,13 @@ void control_task(void *pvParameters)
 
 		//bias
 		if(input[PAN] > 0 )
-			input[PAN] += 4000;
+			input[PAN] += BIAS;
 		else if(input[PAN] < 0 )
-			input[PAN] -= 4000;
+			input[PAN] -= BIAS;
 		if(input[TILT] > 0 )
-			input[TILT] += 4000;
+			input[TILT] += BIAS;
 		else if(input[TILT] < 0 )
-			input[TILT] -= 4000;
+			input[TILT] -= BIAS;
 
 		//reduce input to max
 		if(input[PAN] > PWM_MAX)
@@ -96,8 +120,8 @@ void control_task(void *pvParameters)
 		//update parameters
 		parameter(PUSH,PAN_PWM_P,(INT32S)-input[PAN]);
 		parameter(PUSH,TILT_PWM_P,(INT32S)input[TILT]);
-		parameter(PUSH,PAN_CURRENT_P,(INT32S)feedback[PAN]);
-		parameter(PUSH,TILT_CURRENT_P,(INT32S)feedback[TILT]);
+		parameter(PUSH,PAN_CURRENT_P,(INT32S)/*feedback*/integral[PAN]);
+		parameter(PUSH,TILT_CURRENT_P,(INT32S)/*feedback*/integral[TILT]);
 		parameter(PUSH,PAN_ERROR_P,(INT32S)error[PAN]);
 		parameter(PUSH,TILT_ERROR_P,(INT32S)error[TILT]);
 
@@ -105,15 +129,6 @@ void control_task(void *pvParameters)
 		old_error[PAN] = error[PAN];
 		old_error[TILT] = error[TILT];
 		last_time = wake_time;
-
-		//if in automode and setpoint was reached, change position
-//		if(state(POP,AUTO_MODE_S))
-//			if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
-//			{
-//				if(parameter(ADD,NEXT_POS_P,1) > NUMBER_OF_POSITIONS)
-//					parameter(PUSH,NEXT_POS_P,0);
-//				position(GOTO,parameter(POP,NEXT_POS_P));
-//			}
 
 		//yield
 		vTaskDelayUntil( &wake_time, frequency );

@@ -75,6 +75,7 @@ void blink_task(void *pvParameters)
 	while(TRUE)
 	{
 		state(TOGGLE,BLINK_S);
+		counter(INCREMENT,TIME_C);
 		YIELD(YIELD_TIME_BLINK_T);
 	}
 }
