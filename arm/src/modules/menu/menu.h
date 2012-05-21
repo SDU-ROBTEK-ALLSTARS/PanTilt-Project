@@ -44,7 +44,7 @@
 #define NUMBER_OF_MENUS 		50
 #define NUMBER_OF_DECIMALS		1
 
-#define ADC_TO_DEG(x) 			(x * 3600) / 1024
+#define ADC_TO_DEG(x) 			((x * 1800) / 1024) - 900
 #define DREH_TO_DEG(x)			x * 100
 #define CHAR_TO_NUMBER(x)		x - '0'
 
@@ -100,7 +100,9 @@ enum menu_names
 
 	INFO_M,
 	INFO_M_POS,
+	INFO_M_ERROR,
 	INFO_POS_M,
+	INFO_ERROR_M,
 
 	NOT_IMPLEMENTED
 
