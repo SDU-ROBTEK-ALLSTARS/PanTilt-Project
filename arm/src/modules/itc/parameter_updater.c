@@ -34,8 +34,8 @@ void param_updater_task(void *params)
                          ADDRESS_POS_B_MSB, ADDRESS_POS_B_LSB,
                          ADDRESS_VEL_A_MSB, ADDRESS_VEL_A_LSB,
                          ADDRESS_VEL_B_MSB, ADDRESS_VEL_B_LSB,
-                         /*(ADDRESS_AUX_FROM_ARM | 0x80), ADDRESS_AUX_TO_ARM,*/
-                         0x00}; /* The 0x00 bytes sent are dummies */
+                         (ADDRESS_AUX_FROM_ARM | 0x80), 0x00,
+                         ADDRESS_AUX_TO_ARM, 0x00}; /* The 0x00 bytes sent are dummies */
   INT8U readBuf[sizeof(transmitBuf)]; /* The first byte returned is not used. */
   INT32S temp;
 
@@ -52,6 +52,18 @@ void param_updater_task(void *params)
     temp = parameter(POP, TILT_PWM_P);
     transmitBuf[5] = (INT8U) (temp >> 8);
     transmitBuf[7] = (INT8U) temp;
+
+    /* Get free mode state. If true, set freemode bits to one while maintaining
+     * the rest of the register, else mask freemode bits to zero. */
+    if (state(POP, FREE_MODE_S))
+    {
+      transmitBuf[17] = readBuf[18] | ((1 << AUX_REG_FREEMODE_BIT_0) | (1 << AUX_REG_FREEMODE_BIT_1));
+    }
+    else
+    {
+      transmitBuf[17] = readBuf[18] & ~((1 << AUX_REG_FREEMODE_BIT_0) | (1 << AUX_REG_FREEMODE_BIT_1));
+    }
+
 
     /* Send array of addresses and new PWM vals. Read in the response in
      * the readBuf buffer. */
@@ -73,11 +85,6 @@ void param_updater_task(void *params)
     parameter(PUSH, TILT_POSITION_P, (INT32S) ((readBuf[11] << 8) | readBuf[12]));
     parameter(PUSH, PAN_VELOCITY_P, (INT32S) ((readBuf[13] << 8) | readBuf[14]));
     parameter(PUSH, TILT_VELOCITY_P, (INT32S) ((readBuf[15] << 8) | readBuf[16]));
-
-    /* TODO
-
-	  parameter(PUSH, FREE_P, (INT32S) readBuf[]);
-	  */
 
     vTaskDelay(PAR_UPDATER_TASK_FREQUENCY);
   }
