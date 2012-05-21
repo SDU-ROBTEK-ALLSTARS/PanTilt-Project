@@ -17,15 +17,7 @@
 
 void param_updater_task(void *params)
 {
-  /*
-  const INT8U parMap[] = {PAN_PWM_P,
-                          TILT_PWM_P,
-                          PAN_POSITION_P,
-                          TILT_POSITION_P,
-                          PAN_VELOCITY_P,
-                          TILT_VELOCITY_P,
-                          FREE_P};
-  */
+  /* The 0x00 bytes sent are dummies */
   INT8U transmitBuf[] = {(ADDRESS_DUTY_A_MSB | 0x80), 0x00,
                          (ADDRESS_DUTY_A_LSB | 0x80), 0x00,
                          (ADDRESS_DUTY_B_MSB | 0x80), 0x00,
@@ -35,8 +27,11 @@ void param_updater_task(void *params)
                          ADDRESS_VEL_A_MSB, ADDRESS_VEL_A_LSB,
                          ADDRESS_VEL_B_MSB, ADDRESS_VEL_B_LSB,
                          (ADDRESS_AUX_FROM_ARM | 0x80), 0x00,
-                         ADDRESS_AUX_TO_ARM, 0x00}; /* The 0x00 bytes sent are dummies */
-  INT8U readBuf[sizeof(transmitBuf)]; /* The first byte returned is not used. */
+                         ADDRESS_AUX_TO_ARM, 0x00};
+
+  /* The first byte returned is not used, so the read array is shifted
+   * one byte in the positive direction. */
+  INT8U readBuf[sizeof(transmitBuf)];
   INT32S temp;
 
   /* Registers this task to use the SPI */
@@ -64,21 +59,10 @@ void param_updater_task(void *params)
       transmitBuf[17] = readBuf[18] & ~((1 << AUX_REG_FREEMODE_BIT_0) | (1 << AUX_REG_FREEMODE_BIT_1));
     }
 
-
     /* Send array of addresses and new PWM vals. Read in the response in
      * the readBuf buffer. */
     spi_write_from_task(transmitBuf, sizeof(transmitBuf), portMAX_DELAY);
     spi_read_from_task(readBuf, sizeof(transmitBuf), portMAX_DELAY);
-
-    /* Reading whole arrays seems to be working as inteded now. In case
-     * that goes wrong, try this: */
-    /*
-    for (INT32U i=0; i<sizeof(transmitBuf); i++)
-    {
-      spi_write_from_task(&transmitBuf[i], 1, portMAX_DELAY);
-      spi_read_from_task(&readBuf[i], 1, portMAX_DELAY);
-    }
-    */
 
     /* Update "our" values with the updated ones from the FPGA */
     parameter(PUSH, PAN_POSITION_P, (INT32S) ((readBuf[9] << 8) | readBuf[10]));
