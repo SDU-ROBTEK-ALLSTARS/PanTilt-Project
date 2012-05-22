@@ -1,10 +1,10 @@
 /*****************************************************************************
-* University of Southern Denmark
-* Robotics Engineering Spring 2012
-* Pan Tilt Project
-*
-* MODULENAME.: itc
-*****************************************************************************/
+ * University of Southern Denmark
+ * Robotics Engineering Spring 2012
+ * Pan Tilt Project
+ *
+ * MODULENAME.: itc
+ *****************************************************************************/
 
 /***************************** Include files *******************************/
 #include "itc.h"
@@ -146,6 +146,10 @@ INT8U state(enum data_commands command,enum state_handles name, ...)
 			else
 				states[name] = TRUE;
 			break;
+		case ADD:
+			states[name] += (INT8U)va_arg(argument,int);
+			out = states[name];
+			break;
 		default:
 			break;
 		}
@@ -157,26 +161,39 @@ INT8U state(enum data_commands command,enum state_handles name, ...)
 void position(enum data_commands command, INT8U number,...)
 {
 	static struct position_struct positions[NUMBER_OF_POSITIONS];
-
+	struct position_struct dummy;
+	INT8U i;
 	va_list argument;
 	va_start(argument,number);
 
 	switch(command)
+	{
+	case NEW:
+		dummy.pan = 0;
+		dummy.tilt = 0;
+		for(i = 0 ; i < NUMBER_OF_POSITIONS ; i++)
+			positions[i] = dummy;
+		break;
+	case SAVE:
+		if((number >= 0) && (number < NUMBER_OF_POSITIONS))
 		{
-		case SAVE:
-			if(number >= 0 && number < NUMBER_OF_POSITIONS)
-			positions[number].pan = parameter(POP,PAN_CURRENT_P);
-			positions[number].tilt = parameter(POP,TILT_CURRENT_P);
-			break;
+			dummy.pan = parameter(POP,PAN_CURRENT_P);
+			dummy.tilt = parameter(POP,TILT_CURRENT_P);
+			positions[number] = dummy;
+		}
+		break;
 
-		case GOTO:
+	case GOTO:
+		if(number >= 0 && number < NUMBER_OF_POSITIONS)
+		{
 			parameter(PUSH,PAN_SETPOINT_P,positions[number].pan);
 			parameter(PUSH,TILT_SETPOINT_P,positions[number].tilt);
-			break;
-
-		default:
-			break;
 		}
+		break;
+
+	default:
+		break;
+	}
 
 }
 
@@ -187,34 +204,34 @@ void position(enum data_commands command, INT8U number,...)
  */
 void print_parameters_on_uart(uart_packet_t *packet)
 {
-  char number[12] = {0};
+	char number[12] = {0};
 
-  uart_write((INT8U *) "PAN PWM:\t", 9, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, PAN_PWM_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "PAN PWM:\t", 9, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, PAN_PWM_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 
-  uart_write((INT8U *) "TILT PWM:\t", 10, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, TILT_PWM_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "TILT PWM:\t", 10, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, TILT_PWM_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 
-  uart_write((INT8U *) "PAN POS:\t", 9, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, PAN_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "PAN POS:\t", 9, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, PAN_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 
-  uart_write((INT8U *) "TILT POS:\t", 10, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, TILT_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "TILT POS:\t", 10, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, TILT_POSITION_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 
-  uart_write((INT8U *) "PAN VEL:\t", 9, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, PAN_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "PAN VEL:\t", 9, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, PAN_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 
-  uart_write((INT8U *) "TILT VEL:\t", 10, portMAX_DELAY);
-  uart_write((INT8U *) itoa((int) parameter(POP, TILT_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
-  uart_write((INT8U *) "\n", 1, portMAX_DELAY);
+	uart_write((INT8U *) "TILT VEL:\t", 10, portMAX_DELAY);
+	uart_write((INT8U *) itoa((int) parameter(POP, TILT_VELOCITY_P), number, 10), strlen(number), portMAX_DELAY);
+	uart_write((INT8U *) "\n", 1, portMAX_DELAY);
 }
 
 BOOLEAN itc_init_uartprinter(void)
 {
-  return uart_protocol_register_handler(&print_parameters_on_uart, UART_PACKET_TYPE_GET, 2);
+	return uart_protocol_register_handler(&print_parameters_on_uart, UART_PACKET_TYPE_GET, 2);
 }

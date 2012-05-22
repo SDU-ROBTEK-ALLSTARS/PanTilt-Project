@@ -30,11 +30,11 @@
 
 #define NUMBER_OF_QUEUES 		5
 #define NUMBER_OF_EVENTS 		5
-#define NUMBER_OF_COUNTERS		10
-#define NUMBER_OF_STATES 		5
+#define NUMBER_OF_COUNTERS		5
+#define NUMBER_OF_STATES 		10
 #define NUMBER_OF_VARIABLES 	20
-#define NUMBER_OF_PARAMETERS	15
-#define NUMBER_OF_POSITIONS		2
+#define NUMBER_OF_PARAMETERS	20
+#define NUMBER_OF_POSITIONS		3
 
 /***************************    Enumerations    ****************************/
 enum data_commands
@@ -67,6 +67,7 @@ enum counter_handles
 {
 	IDLE_C,
 	DREH_C,
+	TIME_C
 } ;
 
 enum state_handles
@@ -75,7 +76,7 @@ enum state_handles
 	DREH_S,
 	BLINK_S,
 	AUTO_MODE_S,
-	FREE_MODE_S
+	FREE_MODE_S,
 };
 
 enum parameter_handles
@@ -94,8 +95,8 @@ enum parameter_handles
   PAN_VELOCITY_P,
   TILT_VELOCITY_P,
   FREE_P,
+  SAVE_POS_P,
   NEXT_POS_P,
-  SAVE_POS_P
 };
 
 typedef struct position_struct
