@@ -15,7 +15,7 @@ begin
 	output <= output_signal;
 	process(input, Clk, output_signal)
 		variable hysteresis : STD_LOGIC_VECTOR (4 downto 0):="00000";
-		variable output_state : STD_LOGIC;
+		variable output_state : STD_LOGIC := '0';
 	begin
 		if rising_edge(Clk) then 
 			--Increase/decrease counter

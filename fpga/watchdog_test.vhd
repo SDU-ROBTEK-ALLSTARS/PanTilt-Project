@@ -2,15 +2,15 @@
 -- Company: 
 -- Engineer:
 --
--- Create Date:   20:34:00 05/08/2012
+-- Create Date:   17:45:47 05/22/2012
 -- Design Name:   
--- Module Name:   C:/Users/dellux09/Desktop/pantilt/spi_client/decoder_v2_testb.vhd
+-- Module Name:   C:/Users/dellux09/pantilt/PanTilt-Project/fpga/watchdog_test.vhd
 -- Project Name:  spi_client
 -- Target Device:  
 -- Tool versions:  
 -- Description:   
 -- 
--- VHDL Test Bench Created by ISE for module: FourXDecoderv2
+-- VHDL Test Bench Created by ISE for module: watchdog
 -- 
 -- Dependencies:
 -- 
@@ -25,55 +25,48 @@
 -- to guarantee that the testbench will bind correctly to the post-implementation 
 -- simulation model.
 --------------------------------------------------------------------------------
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+ 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
-
-use IEEE.STD_LOGIC_ARITH.ALL;
-use IEEE.STD_LOGIC_UNSIGNED.ALL;
-ENTITY decoder_v2_testb IS
-END decoder_v2_testb;
+--USE ieee.numeric_std.ALL;
  
-ARCHITECTURE behavior OF decoder_v2_testb IS 
+ENTITY watchdog_test IS
+END watchdog_test;
+ 
+ARCHITECTURE behavior OF watchdog_test IS 
  
     -- Component Declaration for the Unit Under Test (UUT)
  
-    COMPONENT FourXDecoderv2
+    COMPONENT watchdog
     PORT(
-         a : IN  std_logic;
-         b : IN  std_logic;
-         rst_counter : IN  std_logic;
+         input : IN  std_logic_vector(1 downto 0);
          clk : IN  std_logic;
-         pos : OUT  std_logic_vector(15 downto 0)
+         alive : OUT  std_logic
         );
     END COMPONENT;
     
 
    --Inputs
-   signal a : std_logic := '0';
-   signal b : std_logic := '0';
-   signal rst_counter : std_logic := '0';
+   signal input : std_logic_vector(1 downto 0) := (others => '0');
    signal clk : std_logic := '0';
 
  	--Outputs
-   signal pos : std_logic_vector(15 downto 0);
-
+   signal alive : std_logic;
+	signal dead  : std_logic;
+	
    -- Clock period definitions
    constant clk_period : time := 10 ns;
-    constant input_period : time := 1000 ns;
-
+	constant input_shift:time  := 30 ns;
+	constant die_time   : time := 10 ms;
 BEGIN
  
 	-- Instantiate the Unit Under Test (UUT)
-   uut: FourXDecoderv2 PORT MAP (
-          a => a,
-          b => b,
-          rst_counter => rst_counter,
+   uut: watchdog PORT MAP (
+          input => input,
           clk => clk,
-          pos => pos
+          alive => alive
         );
 
    -- Clock process definitions
@@ -85,19 +78,32 @@ BEGIN
 		wait for clk_period/2;
    end process;
  
-	input_process: process
-	
+	life_process:process
 	begin
-		a <= '0';
-		wait for input_period;
-		b <= '0';
-		wait for input_period;
-		a <= '1';
-		wait for input_period;
-		b <= '1';
-		wait for input_period;
+		dead <= '0';
+		wait for die_time;
+		dead <= '1';
+		wait for die_time;
 	end process;
-   
+
+	life_process_2 : process
+	begin
+			input(0)<= '0';
+			input(1)<= '0';
+			wait for input_shift;
+			
+			input(0)<= '1' and (not dead);
+			input(1)<= '0';
+			wait for input_shift;
+			
+			input(0)<= '1' and (not dead);
+			input(1)<= '1' and (not dead);
+			wait for input_shift;
+			
+			input(0)<= '0';
+			input(1)<= '1' and (not dead);
+			wait for input_shift;
+	end process;
    -- Stimulus process
    stim_proc: process
    begin		

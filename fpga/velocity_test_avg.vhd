@@ -2,15 +2,15 @@
 -- Company: 
 -- Engineer:
 --
--- Create Date:   20:34:00 05/08/2012
+-- Create Date:   18:47:18 05/22/2012
 -- Design Name:   
--- Module Name:   C:/Users/dellux09/Desktop/pantilt/spi_client/decoder_v2_testb.vhd
+-- Module Name:   C:/Users/dellux09/pantilt/PanTilt-Project/fpga/velocity_test_avg.vhd
 -- Project Name:  spi_client
 -- Target Device:  
 -- Tool versions:  
 -- Description:   
 -- 
--- VHDL Test Bench Created by ISE for module: FourXDecoderv2
+-- VHDL Test Bench Created by ISE for module: dvdtv2
 -- 
 -- Dependencies:
 -- 
@@ -27,53 +27,49 @@
 --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
-
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
-ENTITY decoder_v2_testb IS
-END decoder_v2_testb;
  
-ARCHITECTURE behavior OF decoder_v2_testb IS 
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+--USE ieee.numeric_std.ALL;
+ 
+ENTITY velocity_test_avg IS
+END velocity_test_avg;
+ 
+ARCHITECTURE behavior OF velocity_test_avg IS 
  
     -- Component Declaration for the Unit Under Test (UUT)
  
-    COMPONENT FourXDecoderv2
+    COMPONENT dvdtv2
     PORT(
-         a : IN  std_logic;
-         b : IN  std_logic;
-         rst_counter : IN  std_logic;
+         position : IN  std_logic_vector(15 downto 0);
          clk : IN  std_logic;
-         pos : OUT  std_logic_vector(15 downto 0)
+         velocity : OUT  std_logic_vector(15 downto 0)
         );
     END COMPONENT;
     
 
    --Inputs
-   signal a : std_logic := '0';
-   signal b : std_logic := '0';
-   signal rst_counter : std_logic := '0';
+   signal position : std_logic_vector(15 downto 0) := (others => '0');
    signal clk : std_logic := '0';
 
  	--Outputs
-   signal pos : std_logic_vector(15 downto 0);
-
+   signal velocity : std_logic_vector(15 downto 0);
+	signal position_inc  : std_logic_vector(15 downto 0):= (others =>'0');
+	
    -- Clock period definitions
    constant clk_period : time := 10 ns;
-    constant input_period : time := 1000 ns;
-
+	constant accelleration : time := 100 ms;
+	constant pos_time : time :=  100 ms;
+ 
 BEGIN
  
 	-- Instantiate the Unit Under Test (UUT)
-   uut: FourXDecoderv2 PORT MAP (
-          a => a,
-          b => b,
-          rst_counter => rst_counter,
+   uut: dvdtv2 PORT MAP (
+          position => position,
           clk => clk,
-          pos => pos
+          velocity => velocity
         );
 
    -- Clock process definitions
@@ -84,20 +80,19 @@ BEGIN
 		clk <= '1';
 		wait for clk_period/2;
    end process;
- 
-	input_process: process
 	
+	input_process : process
 	begin
-		a <= '0';
-		wait for input_period;
-		b <= '0';
-		wait for input_period;
-		a <= '1';
-		wait for input_period;
-		b <= '1';
-		wait for input_period;
+		wait for pos_time;
+		position <= position + position_inc;
 	end process;
-   
+	accel_process : process
+	begin 
+		wait for accelleration;
+		position_inc <= position_inc +1;
+	end process;
+ 
+
    -- Stimulus process
    stim_proc: process
    begin		

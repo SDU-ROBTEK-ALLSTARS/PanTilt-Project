@@ -46,7 +46,7 @@ begin
 		variable v_last_input : STD_LOGIC_VECTOR(15 downto 0):=(others=> '0');
 	begin
 		if rising_edge(clk) then 
-			if(time_counter >= counter_max) then
+			if(time_counter = counter_max) then
 				v_output:= v_last_input - position;
 				v_last_input := position;
 			else
