@@ -38,59 +38,84 @@
 #include "comm/uart.h"
 
 /*****************************    Macros    *******************************/
-#define SYSTEM_START_MENU		MAIN_MENU
+#define SYSTEM_START_MENU		FUNCTIONS_M_REG
 
 #define NUMBER_OF_FIELDS 		4
-#define NUMBER_OF_MENUS 		15
+#define NUMBER_OF_MENUS 		50
 #define NUMBER_OF_DECIMALS		1
-#define NUMBER_OF_DIGITS		5
 
-#define INIT_FIELDS				for(i=0 ; i < NUMBER_OF_FIELDS ; i++)dummy->field[i].show = FALSE;
-#define ADC_TO_DEG(x) 			(x*3600)/1024
-#define DREH_TO_DEG(x)			x*100
+#define ADC_TO_DEG(x) 			((x * 1800) / 1024) - 900
+#define DREH_TO_DEG(x)			x * 100
+#define CHAR_TO_NUMBER(x)		x - '0'
 
 //for menu_setup.c
-#define SETUP(x)		dummy = menu_handler(x);
-#define TOP(x)			dummy->topline = x;
-#define BOTTOM(x)		dummy->bottomline = x;
-#define NEXT(x)			dummy->next = x;
-#define PREV(x)			dummy->previous = x;
-#define ENTER(x)		dummy->enter = x;
-#define TYPE(x)			dummy->type = x;
-#define FIELD(n,a,b,sz) dummy->field[n].begin.x = a;dummy->field[n].begin.y = b;dummy->field[n].size = sz;
-#define PARAM(n,x)		dummy->field[n].show =	TRUE;dummy->field[n].parameter = x;
-#define BLINK(n)		dummy->field[n].blink =	TRUE;
-#define ADC(n)			dummy->field[n].adc_input = TRUE;
-#define DREH(n)			dummy->field[n].dreh_input = TRUE;
-#define FUNCTION(x)		dummy->function = x;
+#define INIT_FIELDS			for(i=0 ; i < NUMBER_OF_FIELDS ; i++)dummy->field[i].show = FALSE;
+#define SETUP(x)			dummy = menu_handler(x);INIT_FIELDS;
+#define MENU_TEXT(m,t,b)	menu_texts[m].topline = t;menu_texts[m].bottomline = b;
+#define TEXT(m)				dummy->text = (menu_texts[m]);
+#define NEXT(x)				dummy->next = x;
+#define PREV(x)				dummy->previous = x;
+#define ENTER(x)			dummy->enter = x;
+#define TYPE(m,i,c)			dummy->type.is_menu = m;dummy->type.is_input = i;dummy->type.is_call = c;
+#define FIELD(n,a,b,sz) 	dummy->field[n].begin.x = a;dummy->field[n].begin.y = b;dummy->field[n].size = sz;
+#define PARAM(n,x)			dummy->field[n].show =	TRUE;dummy->field[n].parameter = x;
+#define BLINK(n)			dummy->field[n].blink =	TRUE;
+#define ADC(n)				dummy->field[n].adc_input = TRUE;
+#define DREH(n)				dummy->field[n].dreh_input = TRUE;
+#define NUMPAD(n)			dummy->field[n].numpad_input = TRUE;
+#define FUNCTION(x)			dummy->function = x;
 
 /***************************    Enumerations    ****************************/
 enum menu_names
 {
-	FIRST_RUN,
-	MAIN_MENU,
-	SET_MENU,
-	SET_SUB_RETURN,
-	SET_SUB_POS,
-	SET_SUB_FREE,
-	SET_SUB_AUTO,
-	NOT_IMPLEMENTED,
-	SET_POS_SUB,
-	SET_FREE_RETURN,
-	SET_FREE_STO,
-	STEP_MENU,
-	STEP_START,
-	STEP_END
+	FIRST_RUN_M,
+
+	FUNCTIONS_M,
+	FUNCTIONS_M_REG,
+	FUNCTIONS_M_FREE,
+	FUNCTIONS_M_AUTO,
+	FUNC_REG_M,
+	FUNC_REG_ON_M,
+	FUNC_FREE_M,
+	FUNC_FREE_RET_M,
+	FUNC_FREE_RET_CALL_M,
+	FUNC_FREE_STO_M,
+	FUNC_FREE_SAVED_M,
+	FUNC_FREE_M_STO,
+	FUNC_AUTO_M,
+	FUNC_AUTO_ON_M,
+
+	SETTINGS_M,
+	SETTINGS_M_REG,
+	SETTINGS_M_AUTO,
+	SETTINGS_M_POS,
+	SET_REG_M,
+	SET_REG_TYPE_M,
+	SET_REG_PARAMETERS_M,
+	SET_REG_PARAM_M,
+	SET_REG_TYPE_PID_M,
+	SET_REG_TYPE_SS_M,
+	SET_AUTO_M,
+	SET_POS_M,
+
+	INFO_M,
+	INFO_M_POS,
+	INFO_M_ERROR,
+	INFO_POS_M,
+	INFO_ERROR_M,
+
+	NOT_IMPLEMENTED
 
 };
 
 enum menu_types
 {
-	NOT_DEFINED,
-	MENU,
-	VIEW,
-	INPUT,
-	CALL
+ IS_MENU = 1,
+ NOT_MENU = 0,
+ IS_INPUT = 1,
+ NOT_INPUT = 0,
+ IS_CALL = 1,
+ NOT_CALL = 0
 };
 
 /*************************    Type definitions    **************************/
@@ -112,14 +137,26 @@ typedef struct field_struct
 	enum parameter_handles parameter;	//parameter to show
 } field_t;
 
+typedef struct text_struct
+{
+	const char *topline;				//top line of display
+	const char *bottomline;				//bottom line of display
+} text_t;
+
+typedef struct type_struct
+{
+	BOOLEAN is_menu;
+	BOOLEAN is_input;
+	BOOLEAN is_call;
+
+} type_t;
 
 typedef struct menu_struct
 {
 	INT8U menu_handle;					//name of menu
 	struct menu_struct *next_handle;	//next menu in list
-	enum menu_types type;				//type of menu, following menu_types enumeration
-	const char *topline;				//top line of display
-	const char *bottomline;				//bottom line of display
+	struct text_struct text;			//display text
+	struct type_struct type;			//type of menu
 	INT8U next;							//pointer to next menu
 	INT8U previous;						//pointer to previous menu
 	INT8U enter;						//pointer to next level
@@ -128,6 +165,7 @@ typedef struct menu_struct
 	field_t field[NUMBER_OF_FIELDS];	//fields to show
 } menu_t;
 
+extern xTaskHandle task_handles[10];
 /**********************   Function declarations   **************************/
 
 /**************************** INIT MENUS ************************************
@@ -199,15 +237,16 @@ void number_to_string(char *array, INT32S number);
 *****************************************************************************/
 INT32S power_of_ten(INT8U operand);
 
-/****************************** PARSE NUMPAD ********************************
-*   Input    : 	former value
-*   Output   : 	new value
-*   Function :  parses input from numpad to field
-*****************************************************************************/
-INT32S parse_numpad(INT32S former_value);
-
-void red_only(void);
-void green_only(void);
+void enter_freemode(void);
+void exit_freemode(void);
 void begin_step(void);
 void end_step(void);
+void activate_regulator(void);
+void deactivate_regulator(void);
+void activate_automode(void);
+void deactivate_automode(void);
+void activate_pid(void);
+void activate_ss(void);
+void save_position(void);
+void get_position(void);
 #endif /* MENU_H_ */

@@ -2,9 +2,9 @@
 #ifndef PARAMETER_UPDATER_H_
 #define PARAMETER_UPDATER_H_
 
-#define PAR_UPDATER_TASK_STACK_SIZE  (configMINIMAL_STACK_SIZE + 20)
+#define PAR_UPDATER_TASK_STACK_SIZE  (configMINIMAL_STACK_SIZE)
 #define PAR_UPDATER_TASK_PRIORITY    (tskIDLE_PRIORITY + 1)
-#define PAR_UPDATER_TASK_FREQUENCY   ((portTickType) (10 / portTICK_RATE_MS))
+#define PAR_UPDATER_TASK_FREQUENCY   ((portTickType) (2 / portTICK_RATE_MS))
 
 BOOLEAN par_updater_init(void);
 

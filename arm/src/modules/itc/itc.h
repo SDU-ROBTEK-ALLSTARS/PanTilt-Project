@@ -30,10 +30,11 @@
 
 #define NUMBER_OF_QUEUES 		5
 #define NUMBER_OF_EVENTS 		5
-#define NUMBER_OF_COUNTERS		10
-#define NUMBER_OF_STATES 		5
+#define NUMBER_OF_COUNTERS		5
+#define NUMBER_OF_STATES 		10
 #define NUMBER_OF_VARIABLES 	20
-#define NUMBER_OF_PARAMETERS	15
+#define NUMBER_OF_PARAMETERS	20
+#define NUMBER_OF_POSITIONS		3
 
 /***************************    Enumerations    ****************************/
 enum data_commands
@@ -50,25 +51,23 @@ enum data_commands
 	SEARCH,
 	TOGGLE,
 	FLUSH,
-	PEEK
+	PEEK,
+	SAVE,
+	GOTO
 } ;
-
-enum queue_handles
-{
-	IDLE_Q,
-	NUMPAD_Q,
-};
 
 enum event_handles
 {
 	IDLE_E,
 	DREH_E,
+	NUMPAD_E
 };
 
 enum counter_handles
 {
 	IDLE_C,
 	DREH_C,
+	TIME_C
 } ;
 
 enum state_handles
@@ -76,7 +75,8 @@ enum state_handles
 	IDLE_S,
 	DREH_S,
 	BLINK_S,
-	NUMPAD_POSITION_S
+	AUTO_MODE_S,
+	FREE_MODE_S,
 };
 
 enum parameter_handles
@@ -84,16 +84,28 @@ enum parameter_handles
   IDLE_P,
   PAN_CURRENT_P,
   TILT_CURRENT_P,
-	PAN_SETPOINT_P,
-	TILT_SETPOINT_P,
-	PAN_POSITION_P,
-	TILT_POSITION_P,
+  PAN_SETPOINT_P,
+  TILT_SETPOINT_P,
+  PAN_POSITION_P,
+  TILT_POSITION_P,
+  PAN_ERROR_P,
+  TILT_ERROR_P,
   PAN_PWM_P,
   TILT_PWM_P,
   PAN_VELOCITY_P,
   TILT_VELOCITY_P,
-  FREE_P
+  FREE_P,
+  SAVE_POS_P,
+  NEXT_POS_P,
 };
+
+typedef struct position_struct
+{
+	struct position_struct *next;
+	INT8U number;
+	INT32S pan;
+	INT32S tilt;
+} position_t;
 
 /**********************   Function declarations   **************************/
 
@@ -104,14 +116,6 @@ enum parameter_handles
 *   Function :  Thread safe parameter handler.
 *****************************************************************************/
 INT32S parameter(INT8U command,INT8U name, ...);
-
-/******************************** QUEUE *************************************
-*   Input    : 	PUSH or POP, name of queue to access, third argument only used
-*   		    if pushing
-*   Output   : 	popped value or zero if empty
-*   Function :  Thread safe queue handler. Elements are erased when popped
-*****************************************************************************/
-INT8U queue(INT8U command,INT8U name,...);
 
 /******************************** EVENT **************************************
 *   Input    : 	PUSH or POP, name of event to access, third argument only
@@ -136,5 +140,9 @@ INT16S counter(INT8U command,INT8U name,...);
 *   Function :  Thread safe event state.
 *****************************************************************************/
 INT8U state(INT8U command,	INT8U name,...);
+
+void position(enum data_commands command, INT8U number,...);
+
+BOOLEAN itc_init_uartprinter(void);
 
 #endif /*_DATA_H*/

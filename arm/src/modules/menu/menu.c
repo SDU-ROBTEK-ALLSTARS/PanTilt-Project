@@ -28,12 +28,30 @@ void menu_task(void *pvParameters)
 	parameter(PUSH,PAN_PWM_P,0);
 	parameter(PUSH,TILT_PWM_P,0);
 
+	parameter(PUSH,NEXT_POS_P,0);
+	parameter(PUSH,SAVE_POS_P,0);
+
+	position(NEW,0);
+	parameter(PUSH,PAN_CURRENT_P,300);
+	parameter(PUSH,TILT_CURRENT_P,900);
+	position(SAVE,1);
+	parameter(PUSH,PAN_CURRENT_P,-400);
+	parameter(PUSH,TILT_CURRENT_P,-1000);
+	position(SAVE,2);
+	parameter(PUSH,PAN_CURRENT_P,0);
+	parameter(PUSH,TILT_CURRENT_P,0);
+
+
+	exit_freemode();
+	deactivate_regulator();
+	deactivate_automode();
+
 	while(TRUE)
 	{
 		//handle inputs
 		menu = parse_dreh_event(menu);
 
-		if(menu->type == INPUT)
+		if(menu->type.is_input)
 		{
 			for(i = 0 ; i < NUMBER_OF_FIELDS ; i++)
 			{
@@ -41,12 +59,15 @@ void menu_task(void *pvParameters)
 					parameter(ADD, menu->field[i].parameter, DREH_TO_DEG(counter(RESET,DREH_C)) );
 				if(menu->field[i].adc_input)
 					parameter(PUSH, menu->field[i].parameter, ADC_TO_DEG(get_adc()) );
+				if(menu->field[i].numpad_input)
+					if(event(PEEK,NUMPAD_E))
+						parameter(PUSH, menu->field[i].parameter, CHAR_TO_NUMBER(event(POP,NUMPAD_E) ));
 			}
 		}
 
-		//update display
-		display_buffer_write_string(0,0,menu->topline);
-		display_buffer_write_string(0,1,menu->bottomline);
+		//update display buffer
+		display_buffer_write_string(0,0,menu->text.topline);
+		display_buffer_write_string(0,1,menu->text.bottomline);
 
 		for(i=0 ; i < NUMBER_OF_FIELDS ; i++)
 		{
@@ -67,6 +88,7 @@ void menu_task(void *pvParameters)
 		YIELD(YIELD_TIME_MENU_T)
 	}
 }
+
 menu_t* menu_handler(INT8U handle)
 {
 	static struct menu_struct *root;
@@ -75,7 +97,7 @@ menu_t* menu_handler(INT8U handle)
 	dummy.menu_handle = handle;
 
 	//if first run
-	if(handle == FIRST_RUN)
+	if(handle == FIRST_RUN_M)
 	{
 		root = pvPortMalloc( sizeof(menu_t) );
 		root->menu_handle = 0;
@@ -95,68 +117,21 @@ menu_t* menu_handler(INT8U handle)
 			iterator = iterator->next_handle;
 			iterator->next_handle = 0;
 			iterator->menu_handle = handle;
-			iterator->type = NOT_DEFINED;
 		}
 		else
 		{
-
-			switch(iterator->type)
-			{
-			case MENU:
+			if(iterator->type.is_menu)
 				state(PUSH,DREH_S,EVENT);
-				break;
-			case VIEW:
-				state(PUSH,DREH_S,EVENT);
-				break;
-			case INPUT:
+			if(iterator->type.is_input)
 				state(PUSH,DREH_S,COUNT);
-				break;
-			case CALL:
-				state(PUSH,DREH_S,EVENT);
+			if(iterator->type.is_call)
 				(*iterator->function)();
-				break;
-			case NOT_DEFINED:
-				break;
-			default:
-				state(PUSH,DREH_S,EVENT);
-				break;
-			}
 
 			display_buffer_clear_blink();
 		}
 	}
 	return iterator;
 }
-
-
-//menu_t* menu_handler(enum menu_names name)
-//{
-//	static menu_t menus[NUMBER_OF_MENUS];
-//
-//	switch(menus[name].type)
-//	{
-//	case MENU:
-//		state(PUSH,DREH_S,EVENT);
-//		break;
-//	case VIEW:
-//		state(PUSH,DREH_S,EVENT);
-//		break;
-//	case INPUT:
-//		state(PUSH,DREH_S,COUNT);
-//		break;
-//	case CALL:
-//		state(PUSH,DREH_S,EVENT);
-//		(*menus[name].function)();
-//		break;
-//	default:
-//		state(PUSH,DREH_S,EVENT);
-//		break;
-//	}
-//
-//	display_buffer_clear_blink();
-//
-//	return &menus[name];
-//}
 
 menu_t* parse_dreh_event(menu_t* menu)
 {
@@ -165,55 +140,17 @@ menu_t* parse_dreh_event(menu_t* menu)
 	case IDLE:
 		break;
 	case DREH_CW:
-		if(menu->next)
-		{
-			menu = menu_handler(menu->next);
-		}
+		menu = menu_handler(menu->next);
 		break;
 	case DREH_CCW:
-		if(menu->previous)
-		{
-			menu = menu_handler(menu->previous);
-		}
+		menu = menu_handler(menu->previous);
 		break;
 	case DREH_PUSH:
-		if(menu->enter)
-		{
-			menu = menu_handler(menu->enter);
-		}
+		menu = menu_handler(menu->enter);
 		break;
 	}
 	return menu;
 }
-
-INT32S parse_numpad(INT32S former_value)
-{
-	INT8U input;
-	char string[NUMBER_OF_DIGITS];
-
-	input = queue(POP,NUMPAD_Q);
-	if(input)
-	{
-		//		for(i = 0 ; i < NUMBER_OF_DIGITS ; i++)
-		//			string[i] = 0;
-		number_to_string(string,former_value);
-
-		//		while(input)
-		//		{
-		//			for(i = 0 ; i < NUMBER_OF_DIGITS - 1 ; i++)
-		//				string[i] = string[i+1];
-		//			string[NUMBER_OF_DIGITS - 1] = input;
-		//			input = queue(POP,NUMPAD_Q);
-		//		}
-
-		former_value = string_to_number(string);
-
-
-	}
-	return former_value;
-}
-
-
 
 INT32S string_to_number(char *array)
 {
@@ -235,18 +172,12 @@ void number_to_string(char *array, INT32S number)
 {
 	INT8U i = 4;
 
-	//go to the end of array
-	//	for(i = 0 ; array[i] != 0 ; i++);
-
 	do
 	{
-		//add digit to array and decrease pointer
-		array[i] = ( number % 10 ) + '0';
+		array[i] = ( number % 10 ) + '0';		//add digit to array and decrease pointer
 		i--;
 	}
-	//remove digit
-	while(( number /= 10 ) > 0);
-
+	while(( number /= 10 ) > 0);				//remove digit
 }
 
 INT32S power_of_ten(INT8U operand)
@@ -269,36 +200,51 @@ INT32S power_of_ten(INT8U operand)
 	return out;
 }
 
-void begin_step(void)
+void enter_freemode(void)
+{
+	deactivate_automode();
+	state(PUSH,FREE_MODE_S,TRUE);
+}
+
+void exit_freemode(void)
+{
+	state(PUSH,FREE_MODE_S,FALSE);
+}
+void activate_regulator(void)
+{
+	vTaskResume( task_handles[CONTROL_T] );
+}
+
+void deactivate_regulator(void)
+{
+	vTaskSuspend( task_handles[CONTROL_T] );
+}
+void activate_automode(void)
+{
+	state(PUSH,AUTO_MODE_S,TRUE);
+	vTaskResume( task_handles[CONTROL_T] );
+}
+
+void deactivate_automode(void)
+{
+	state(PUSH,AUTO_MODE_S,FALSE);
+}
+void activate_ss(void)
 {
 	red_led( FALSE );
 	yellow_led( FALSE );
 	green_led( TRUE );
-
-	parameter(PUSH,TILT_PWM_P, 0x8000);
-	parameter(PUSH,PAN_PWM_P, 0);
 }
-
-void end_step(void)
+void activate_pid(void)
 {
 	red_led( FALSE );
-	yellow_led( FALSE );
-	green_led( FALSE );
-
-	parameter(PUSH,TILT_PWM_P, 0);
-	parameter(PUSH,PAN_PWM_P, 0);
-}
-
-void red_only(void)
-{
-	red_led( TRUE );
-	yellow_led( FALSE );
+	yellow_led( TRUE );
 	green_led( FALSE );
 }
 
-void green_only(void)
+void save_position(void)
 {
-	red_led( FALSE );
-	yellow_led( FALSE );
-	green_led( TRUE );
+	position(SAVE,	parameter(POP,SAVE_POS_P));
 }
+
+

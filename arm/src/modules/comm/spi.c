@@ -33,7 +33,8 @@
  *
  * TODO:
  *
- * - Documentation
+ * - BUG: When sending an array larger than SPI_PUBLIC_QUEUE_SIZE, the
+ *   sofware sometimes crashes!
  *
  * - ISR speed optimization (write directly to hardware)
  *
@@ -510,37 +511,6 @@ void spi_int_handler(void)
 }
 
 /**
- * Initializer for SPI related tasks and other ressources.
- *
- * @param None.
- *
- * This function creates the FreeRTOS SPI-transmit task and associated queues.
- * It also enables SPI receive interrupts.
- *
- * @return TRUE if the initialization was successful, FALSE otherwise.
- */
-BOOLEAN spi_init(void)
-{
-  if (/* Internal queues for in- and output */
-      (intern_queue_in = xQueueCreate(SPI_INTERN_QUEUE_IN_SIZE, sizeof(spi_message_t))) &&
-      (intern_waiting_to_receive.queue = xQueueCreate(SPI_NUM_MAX_USERTASKS, sizeof(struct queue_list_item_t *))) &&
-      /* Tasks */
-      xTaskCreate(task_spi_transmit, (signed portCHAR *) "SPI_TX", (configMINIMAL_STACK_SIZE), NULL, SPI_TX_TASK_PRIORITY, NULL) &&
-      xTaskCreate(task_spi_receive, (signed portCHAR *) "SPI_RX", (configMINIMAL_STACK_SIZE), NULL, SPI_RX_TASK_PRIORITY, NULL)
-     )
-  {
-    queue_list_initialize(&list_registered_tasks);
-    vSemaphoreCreateBinary(intern_waiting_to_receive.any_waiting);
-    vSemaphoreCreateBinary(user_task_waiting_to_transmit);
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-/**
  * Configures hardware periphirals for SPI function
  *
  * @param None
@@ -548,6 +518,8 @@ BOOLEAN spi_init(void)
  */
 void spi_config_hw(void)
 {
+  taskENTER_CRITICAL();
+
   SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
   SysCtlDelay(3);
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -572,4 +544,39 @@ void spi_config_hw(void)
   IntPrioritySet(INT_UART0, configMAX_SYSCALL_INTERRUPT_PRIORITY + (unsigned char)(1 << 5));
 
   SSIEnable(SSI0_BASE);
+
+  taskEXIT_CRITICAL();
+}
+
+/**
+ * Initializer for SPI related tasks and other ressources.
+ *
+ * @param None.
+ *
+ * This function creates the FreeRTOS SPI-transmit task and associated queues.
+ * It also enables SPI receive interrupts.
+ *
+ * @return TRUE if the initialization was successful, FALSE otherwise.
+ */
+BOOLEAN spi_init(void)
+{
+  spi_config_hw();
+
+  if (/* Internal queues for in- and output */
+      (intern_queue_in = xQueueCreate(SPI_INTERN_QUEUE_IN_SIZE, sizeof(spi_message_t))) &&
+      (intern_waiting_to_receive.queue = xQueueCreate(SPI_NUM_MAX_USERTASKS, sizeof(struct queue_list_item_t *))) &&
+      /* Tasks */
+      xTaskCreate(task_spi_transmit, (signed portCHAR *) "SPI_TX", (configMINIMAL_STACK_SIZE), NULL, SPI_TX_TASK_PRIORITY, NULL) &&
+      xTaskCreate(task_spi_receive, (signed portCHAR *) "SPI_RX", (configMINIMAL_STACK_SIZE), NULL, SPI_RX_TASK_PRIORITY, NULL)
+     )
+  {
+    queue_list_initialize(&list_registered_tasks);
+    vSemaphoreCreateBinary(intern_waiting_to_receive.any_waiting);
+    vSemaphoreCreateBinary(user_task_waiting_to_transmit);
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }

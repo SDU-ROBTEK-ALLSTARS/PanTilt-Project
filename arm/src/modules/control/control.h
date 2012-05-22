@@ -25,22 +25,41 @@
 #include "maindefs.h"
 
 /*****************************   Constants   *******************************/
-#define 	TRESHOLD 	10
-#define 	P_TERM 		30
-#define		P_TERM_PAN	5
-#define		PAN			0
-#define 	TILT		1
+//optimized with respect to time
+//#define 	PAN_P_TERM 				22
+//#define 	TILT_P_TERM 			22
+//#define 	I_TERM 					0.15
+//#define 	D_TERM 					0.15
+//#define 	INTEGRAL_MAX			18000
 
-#define  	PAN_FPGA_MAX		0x80D0
-#define		PAN_FPGA_MIN		0x7F20
-#define		TILT_FPGA_MAX		0x0434
-#define		TILT_FPGA_MIN		0x0000
-#define 	FPGA_PWM_MAX		0x8000
-#define 	FPGA_PWM_MIN		0x7FFF
-#define		FPGA_PWM_CENTER		0x8000
-#define 	PAN_DEG_MAX			1800		//180.00 deg
-#define		TILT_DEG_MAX		3600		//360.00 deg
+//optimized with respect to precision
+#define 	PAN_P_TERM 				6
+#define 	TILT_P_TERM 			6
+#define 	I_TERM 					0.05
+#define 	D_TERM 					0.05
+#define 	INTEGRAL_MAX			10000
 
+#define		TASK_FREQUENCY			FREQUENCY(100) //frequency in Hz
+#define		TASK_PERIOD				1/TASK_FREQUENCY
+#define		FREQUENCY(x)			(configTICK_RATE_HZ/x)
+#define		PWM_MIN					5000
+#define		PWM_MAX					30000
+#define 	GOAL					5
+#define		TRESHOLD				1
+#define		BIAS					4500
+#define 	HOLD_ON_GOAL			10
+
+#define 	TICKS_PR_REVOLUTION		12*30*3 		//ticks pr motor revolution * gear ratio * belt ratio
+#define		TICK_TO_DEGREE_FACTOR	3.34f
+#define 	TICKS_ZERO				0x8000
+#define		TICKS_TO_DEGREES(x)		(x - TICKS_ZERO) * TICK_TO_DEGREE_FACTOR
+
+/*****************************   Enumerations   ****************************/
+enum
+{
+	PAN,
+	TILT,
+};
 /************************   Function declarations   ************************/
 
 /*****************************************************************************
@@ -50,12 +69,6 @@
 ******************************************************************************/
 void control_task(void *pvParameters);
 
-/*****************************************************************************
-*   Input    :	feedback vector
-*   Output   :	-
-*   Function :	Converts feedback from FPGA
-******************************************************************************/
-void conversions(float *feedback);
 
 /****************************** End Of Module *******************************/
 #endif

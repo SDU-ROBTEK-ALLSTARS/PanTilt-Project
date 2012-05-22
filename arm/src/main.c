@@ -1,3 +1,29 @@
+/**************************************************************************
+ * University of Southern Denmark
+ * Pan Tilt Project
+ *
+ * MODULENAME.: main
+ **************************************************************************/
+
+/**************************   Change Log   ********************************
+ * Date    Id    Change
+ * YYMMDD
+ * --------------------
+ * 120411  LBL   Module created
+ *
+ **************************************************************************/
+
+/*************************** Description **********************************
+ *usage:	Facilitating the L3S6569 to control a setup of a pan-tilt
+ *			connected via an SPI controller build in FPGA.
+ *
+ *To-do:	* Implement state-space controller algorithm
+ *			* Implement changing between controlles
+ *			* Implement free-mode
+ *
+ **************************************************************************/
+/***************************** Include files *******************************/
+
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -75,14 +101,14 @@ int main(void)
       (xTaskCreate(control_task,  NAME("Control"), DEFAULT_STACK, NULL, PRIORITY_HIGH,  &task_handles[CONTROL_T])) == pdPASS &&
       (xTaskCreate(blink_task,    NAME("Blink"),   DEFAULT_STACK, NULL, PRIORITY_LOW,   &task_handles[BLINK_T])) == pdPASS &&
       uart_to_spi_init() &&
-      step_response_init()
+      step_response_init() &&
+      itc_init_uartprinter()
       #ifdef DEBUG
       && spi_test_init()
       && runtimestats_init()
       #endif /* DEBUG */
      )
   {
-    IntMasterEnable();
     vTaskStartScheduler();
   }
 
@@ -99,7 +125,7 @@ void hardware_setup(void)
   /* Drive at 50MHz crystal clock */
   SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_8MHZ);
   SysCtlDelay(3);
-  spi_config_hw();
+
   uart_init_hw();
   status_led_init_hw();
   display_init();
@@ -116,11 +142,11 @@ void init_semaphores(void)
 {
   sem_lcd_buffer  = xSemaphoreCreateMutex();
   sem_common_pins = xSemaphoreCreateMutex();
-  sem_queue     = xSemaphoreCreateMutex();
-  sem_event     = xSemaphoreCreateMutex();
-  sem_counter   = xSemaphoreCreateMutex();
-  sem_state     = xSemaphoreCreateMutex();
-  sem_parameter = xSemaphoreCreateMutex();
+  sem_queue       = xSemaphoreCreateMutex();
+  sem_event       = xSemaphoreCreateMutex();
+  sem_counter     = xSemaphoreCreateMutex();
+  sem_state       = xSemaphoreCreateMutex();
+  sem_parameter   = xSemaphoreCreateMutex();
 }
 
 void init_queues(void)

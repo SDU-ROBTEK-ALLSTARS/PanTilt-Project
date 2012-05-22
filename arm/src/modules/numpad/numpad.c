@@ -65,7 +65,7 @@ void numpad_task(void *pvParameters)
 				{
 					y = row( y );							//parse to numeric value of row
 					key = key_catch( x, y );				//parse column and row into char
-					queue(PUSH,NUMPAD_Q,key);				//push char to input queue
+					event(PUSH,NUMPAD_E,key);		//push char to input queue
 					prel = 0;
 					key_state = PRESSED;			 		//go to next state
 				}

@@ -40,12 +40,17 @@
  * can be saved is limited to how much memory is available in RAM.
  * When the task has run and sent the log data through UART, it frees
  * the previously allocated memory and shuts itself down.
+ *
+ * TODO:
+ * - Suspend control task while running this test. They cannot both run
+ *   at the same time without problems.
  */
 
 static xTaskHandle step_response_log_task_handle;
 volatile static unsigned long _timer1_ticks;
 static INT32U *timeData;
 static INT32S *posData;
+static INT32S *velData;
 static INT32U num_measurements;
 static INT32U task_delay_ms;
 static xQueueHandle logMutex;
@@ -58,7 +63,7 @@ void timer1_setup(void)
   SysCtlDelay(3);
 
   TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-
+  TimerPrescaleSet(TIMER1_BASE, TIMER_A, 0);
   TimerLoadSet(TIMER1_BASE, TIMER_A, (unsigned long) (configCPU_CLOCK_HZ / 1000));
 
   IntPrioritySet(INT_TIMER1A, (unsigned char)(1 << 5));
@@ -80,41 +85,43 @@ void timer1_int_handler(void)
 }
 
 /*
- * Task to handle data-logging. It is not run unless specifically asked to.
+ * Task to handle data-logging. It is not run unless specifically asked to,
+ * and not unless it can lock the data log memory by semaphore.
  */
 void step_response_log_task(void *params)
 {
   if (xSemaphoreTake(logMutex, (portTickType) 0xFFF) == pdTRUE)
   {
     INT32U i = 0;
+    portTickType task_delay_ticks = (portTickType)(task_delay_ms / portTICK_RATE_MS);
+
     timer1_setup();
 
-    parameter(PUSH,TILT_PWM_P, 0x8000);
-    parameter(PUSH,PAN_PWM_P, 0);
+    parameter(PUSH,TILT_PWM_P, (INT32S) 0x8000);
+    parameter(PUSH,PAN_PWM_P, (INT32S) 0);
 
     /* Switching out this task a bit to let others register the new settings */
     vTaskDelay((portTickType) 1);
 
-    _timer1_ticks = 0UL;
+    _timer1_ticks = (INT32U) 0;
 
     while (1)
     {
       /* Save data. We won't be prempted while logging each data couple */
-      taskENTER_CRITICAL();
       timeData[i] = (INT32U) _timer1_ticks;
       posData[i] = (INT32S) parameter(POP, TILT_POSITION_P);
-      taskEXIT_CRITICAL();
+      velData[i] = (INT32S) parameter(POP, TILT_VELOCITY_P);
 
       i++;
 
       if (i == num_measurements)
       {
         /* Stop the motors and disable the timer again */
-        parameter(PUSH,TILT_PWM_P, 0);
-        parameter(PUSH,PAN_PWM_P, 0);
+        parameter(PUSH,TILT_PWM_P, (INT32S) 0);
+        parameter(PUSH,PAN_PWM_P, (INT32S) 0);
 
         /* Switching out this task a bit to let others register the new settings */
-        vTaskDelay((portTickType)(10 / portTICK_RATE_MS));
+        vTaskDelay((portTickType)(100 / portTICK_RATE_MS));
 
         TimerIntDisable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
         TimerDisable(TIMER1_BASE, TIMER_A);
@@ -134,6 +141,11 @@ void step_response_log_task(void *params)
           UARTCharPut(UART0_BASE, (unsigned char)(posData[j] >> 8));
           UARTCharPut(UART0_BASE, (unsigned char)(posData[j] >> 16));
           UARTCharPut(UART0_BASE, (unsigned char)(posData[j] >> 24));
+
+          UARTCharPut(UART0_BASE, (unsigned char)(velData[j] >> 0));
+          UARTCharPut(UART0_BASE, (unsigned char)(velData[j] >> 8));
+          UARTCharPut(UART0_BASE, (unsigned char)(velData[j] >> 16));
+          UARTCharPut(UART0_BASE, (unsigned char)(velData[j] >> 24));
         }
 
         /* Resume all other tasks again, but kill this one and free the memory
@@ -150,7 +162,7 @@ void step_response_log_task(void *params)
       }
       else
       {
-        vTaskDelay((portTickType)(task_delay_ms / portTICK_RATE_MS));
+        vTaskDelay(task_delay_ticks);
       }
     }
   }
@@ -181,6 +193,7 @@ void step_response_trigger(uart_packet_t *p_packet)
       /* Allocate memory for log data */
       timeData = (INT32U *) pvPortMalloc(num_measurements * sizeof(INT32U));
       posData = (INT32S *) pvPortMalloc(num_measurements * sizeof(INT32S));
+      velData = (INT32S *) pvPortMalloc(num_measurements * sizeof(INT32S));
       task_create_return = xTaskCreate(step_response_log_task,
                                        (signed portCHAR *) "STEP_LOGGER",
                                        configMINIMAL_STACK_SIZE,
@@ -189,7 +202,7 @@ void step_response_trigger(uart_packet_t *p_packet)
                                        &step_response_log_task_handle);
 
       /* Check if the allocations were succesful */
-      if (timeData == NULL || posData == NULL || task_create_return != pdPASS)
+      if (timeData == NULL || posData == NULL || velData == NULL || task_create_return != pdPASS)
       {
         uart_write((INT8U *) "ERRNOMEM\n", 9, portMAX_DELAY);
 

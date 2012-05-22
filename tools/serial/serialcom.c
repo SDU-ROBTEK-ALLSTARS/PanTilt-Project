@@ -37,6 +37,7 @@ int longEchoTest(int num_packets);
 void requestRuntimeStats(void);
 void sendToSPI(void);
 void getStepResponse(int numMeasurements, int loggerTaskDelayMs);
+int sendDatalessPacket(int8_t type, int8_t instruction);
 
 static const char *deviceName;
 static int portId;
@@ -73,13 +74,14 @@ int main(int argc, char *argv[])
     while (run == true)
     {
       printf("\nSelect option:\n");
-      printf(" 1)\tPrint run-time stats\n");
-      printf(" 2)\tSend to SPI\n");
-      printf(" 3)\tStep response\n");
+      printf(" 1)\tPrint run-time stats.\n");
+      printf(" 2)\tSend to SPI.\n");
+      printf(" 3)\tStep response.\n");
       printf(" 4)\tListen!\n");
-      printf(" 6)\tRun SPI test\n");
-      printf(" 7)\tLong echo test\n");
-      printf(" 0)\tExit\n");
+      printf(" 5)\tPrint parameters.\n");
+      printf(" 6)\tRun SPI test.\n");
+      printf(" 7)\tLong echo test.\n");
+      printf(" 0)\tExit.\n");
 
       /* Get input char from stdin (ignore newline) */
       while ((input = fgetc(stdin)) == '\n') {}
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
         break;
 
       case '3':
-        getStepResponse(1000, 2);
+        getStepResponse(500, 3);
         break;
 
       case '4':
@@ -107,6 +109,16 @@ int main(int argc, char *argv[])
         break;
 
       case '5':
+        result = sendDatalessPacket(UART_PACKET_TYPE_GET, 2);
+        if (result > 0)
+        {
+          listen(3, "%c");
+        }
+        else
+        {
+          printf("Error sending packet.\n");
+        }
+
         break;
 
       case '6':
@@ -167,13 +179,13 @@ void sendToSPI(void)
 
 void getStepResponse(int numMeasurements, int loggerTaskDelayMs)
 {
-  int dataSize = numMeasurements*4*2;
+  int dataSize = numMeasurements*4*3;
   uint8_t readBuf[dataSize];
   int32_t val;
   uint32_t uVal;
   int result, sumBytesRead, i, j;
   FILE *fp;
-  bool timeDataNext;
+  bool timeDataNext, posDataNext, velDataNext;
   xUartPacket packet;
 
   /* First, request the step response */
@@ -236,18 +248,20 @@ void getStepResponse(int numMeasurements, int loggerTaskDelayMs)
   fprintf(fp, "Bytes received: %d\n", sumBytesRead);
   fprintf(fp, "Number of measurements: %d\n", numMeasurements);
   fprintf(fp, "Logger task approx. yield time: %d ms\n", loggerTaskDelayMs);
-  fprintf(fp, "Time(ms),Position\n");
+  fprintf(fp, "Time(ms),Position,Velocity\n");
 
   i = 0;
   timeDataNext = true;
+  posDataNext = false;
+  velDataNext = false;
+
 
   while (i < sumBytesRead)
   {
-    uVal = 0;
-    val = 0;
-
     if (timeDataNext == true)
     {
+      uVal = 0;
+
       /* Next 4 bytes are timeData */
       for (j=0; j<4; j++)
       {
@@ -256,9 +270,26 @@ void getStepResponse(int numMeasurements, int loggerTaskDelayMs)
       }
       fprintf(fp, "%d,", uVal);
       timeDataNext = false;
+      posDataNext = true;
     }
-    else
+    else if (posDataNext == true)
     {
+      val = 0;
+
+      /* Next 4 bytes are posData */
+      for (j=0; j<4; j++)
+      {
+        val |= (int32_t) readBuf[i] << (8 * j);
+        i++;
+      }
+      fprintf(fp, "%d,", val);
+      posDataNext = false;
+      velDataNext = true;
+    }
+    else if (velDataNext == true)
+    {
+      val = 0;
+
       /* Next 4 bytes are posData */
       for (j=0; j<4; j++)
       {
@@ -266,6 +297,7 @@ void getStepResponse(int numMeasurements, int loggerTaskDelayMs)
         i++;
       }
       fprintf(fp, "%d\n", val);
+      velDataNext = false;
       timeDataNext = true;
     }
   }
@@ -282,6 +314,17 @@ void requestRuntimeStats(void)
   packet.datalength = 0;
 
   sendPacket(&packet);
+}
+
+int sendDatalessPacket(int8_t type, int8_t instruction)
+{
+  xUartPacket packet;
+
+  packet.type = type;
+  packet.instruction = instruction;
+  packet.datalength = 0;
+
+  return sendPacket(&packet);
 }
 
 void triggerSPITest(int8_t num_loops)
