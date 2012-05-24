@@ -1,5 +1,10 @@
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "task.h"
+
 #include <sys/types.h>
+#include <sys/reent.h>
 
 /**
  * @file syscalls.c
@@ -10,11 +15,8 @@
  */
 
 /* Linker script defines these */
-extern unsigned int _HEAP_START;
-extern unsigned int _HEAP_END;
-
-/* Register name faking */
-register caddr_t stack_ptr __asm("sp");
+extern unsigned long _HEAP_START;
+extern unsigned long _HEAP_END;
 
 /*
  * _sbrk is a function for growing heap space, used by malloc()
@@ -31,20 +33,22 @@ caddr_t _sbrk(int increment)
     heap = (caddr_t) &_HEAP_START;
   }
 
-  prevHeap = heap;
-
   /* Always return data aligned on a 8 byte boundary */
-  nextHeap = (caddr_t)(((unsigned int)(heap + increment) + 7) & ~7);
+  nextHeap = (caddr_t)(((unsigned long) (heap + increment) + 7) & ~7);
 
-  /* Check enough space and there is no collision with stack coming the other
-   * way, if stack is above start of heap */
-  if ((((caddr_t)&_HEAP_START < stack_ptr) && (nextHeap > stack_ptr)) ||
-      (nextHeap > (caddr_t)&_HEAP_END))
+  /*
+    Modded to not check the stack pointer, as FreeRTOS uses the stack pointer
+    register to point at each individual tasks' stack. Instead, we just check
+    that the incremented heap has not crossed _HEAP_END as defined in the linker
+    script.
+  */
+  if (nextHeap > (caddr_t) &_HEAP_END)
   {
     return NULL;
   }
   else
   {
+    prevHeap = heap;
     heap = nextHeap;
     return (caddr_t) prevHeap;
   }
