@@ -523,8 +523,8 @@ fido : watchdog
 			din  <= v_din;
 			motor_a_input <= v_motor_a_input;
 			motor_b_input <= v_motor_b_input;
-			motor_a_freerun <= v_aux_in(MOTOR_A_FREERUN_POS) and (not alive);
-			motor_b_freerun <= v_aux_in(MOTOR_B_FREERUN_POS) and (not alive);
+			motor_a_freerun <= v_aux_in(MOTOR_A_FREERUN_POS) ;--and (not alive);
+			motor_b_freerun <= v_aux_in(MOTOR_B_FREERUN_POS) ;--and (not alive);
 			decoder_reset_a_from_arm <= v_aux_in(DECODER_A_RESET_POS);
 			decoder_reset_b_from_arm <= v_aux_in(DECODER_B_RESET_POS);
 			watchdog_signal(0) <= v_aux_in(WATCH_DOG_A_POS);
