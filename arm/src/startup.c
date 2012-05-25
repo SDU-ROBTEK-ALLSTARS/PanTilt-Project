@@ -54,13 +54,10 @@ extern void timer1_int_handler(void);
 
 //*****************************************************************************
 //
-// Reserve space for the system stack.
+// Marks the top of the stack. Defined in the linker script.
 //
 //*****************************************************************************
-#ifndef STACK_SIZE
-  #define STACK_SIZE 256
-#endif
-static unsigned long pulStack[STACK_SIZE];
+extern void _STACK_TOP(void);
 
 //*****************************************************************************
 //
@@ -71,8 +68,7 @@ static unsigned long pulStack[STACK_SIZE];
 __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) =
 {
-    (void (*)(void))((unsigned long)pulStack + sizeof(pulStack)),
-                                            // The initial stack pointer
+    &_STACK_TOP,                            // The initial stack pointer
     ResetISR,                               // The reset handler
     NmiSR,                                  // The NMI handler
     FaultISR,                               // The hard fault handler
