@@ -58,7 +58,7 @@ extern void timer1_int_handler(void);
 //
 //*****************************************************************************
 #ifndef STACK_SIZE
-  #define STACK_SIZE 512
+  #define STACK_SIZE 256
 #endif
 static unsigned long pulStack[STACK_SIZE];
 
