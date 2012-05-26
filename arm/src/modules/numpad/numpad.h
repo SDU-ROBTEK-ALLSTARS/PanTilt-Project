@@ -26,6 +26,8 @@
 #include "itc/itc.h"
 
 /*****************************    Defines    *******************************/
+#define FLICKER_CATCH 30
+
 enum keyboard_states
 {
 	NOT_PRESSED,

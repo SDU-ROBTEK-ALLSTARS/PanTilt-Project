@@ -27,19 +27,17 @@ void menu_task(void *pvParameters)
 	parameter(PUSH,TILT_SETPOINT_P,0);
 	parameter(PUSH,PAN_PWM_P,0);
 	parameter(PUSH,TILT_PWM_P,0);
-
 	parameter(PUSH,NEXT_POS_P,0);
 	parameter(PUSH,SAVE_POS_P,0);
-
+//
 	position(NEW,0);
-	parameter(PUSH,PAN_CURRENT_P,300);
-	parameter(PUSH,TILT_CURRENT_P,900);
+	parameter(PUSH,PAN_CURRENT_P,-150);
+	parameter(PUSH,TILT_CURRENT_P,860);
 	position(SAVE,1);
-	parameter(PUSH,PAN_CURRENT_P,-400);
-	parameter(PUSH,TILT_CURRENT_P,-1000);
+	parameter(PUSH,PAN_CURRENT_P,150);
+	parameter(PUSH,TILT_CURRENT_P,-2600);
 	position(SAVE,2);
-	parameter(PUSH,PAN_CURRENT_P,0);
-	parameter(PUSH,TILT_CURRENT_P,0);
+
 
 
 	exit_freemode();

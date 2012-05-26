@@ -52,20 +52,16 @@ void numpad_task(void *pvParameters)
 			TEST_SEM_COMMON_PINS
 			{
 				select_x( x );							//set current column high
-				GIVE_SEM_COMMON_PINS
 				key_state = TEST_IF_PRESSED;			//go to next state
-			}
+
 		case TEST_IF_PRESSED:
-			TEST_SEM_COMMON_PINS
-			{
 				y = GPIO_PORTD_DATA_R & 0x3C;			//read input pins
 				GIVE_SEM_COMMON_PINS
-
 				if( y )										//if button is pressed
 				{
 					y = row( y );							//parse to numeric value of row
 					key = key_catch( x, y );				//parse column and row into char
-					event(PUSH,NUMPAD_E,key);		//push char to input queue
+					event(PUSH,NUMPAD_E,key);				//push char to input queue
 					prel = 0;
 					key_state = PRESSED;			 		//go to next state
 				}
@@ -83,19 +79,17 @@ void numpad_task(void *pvParameters)
 			TEST_SEM_COMMON_PINS
 			{
 				select_x( x );								//set current column high
-				GIVE_SEM_COMMON_PINS
 				key_state = TEST_IF_RELEASED;				//go to next state
-			}
+
 		case TEST_IF_RELEASED:
-			TEST_SEM_COMMON_PINS
-			{
+
 				y = GPIO_PORTD_DATA_R & 0x3C;				//read input pins
 				GIVE_SEM_COMMON_PINS
 
 				if( !y )									//if button is still pressed
 				{
 					prel++;
-					if(prel>30)
+					if(prel>FLICKER_CATCH)
 					{
 					x++;									//increase x
 					if( x > 3 )								//roll over

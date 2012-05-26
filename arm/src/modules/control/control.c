@@ -50,15 +50,24 @@ void control_task(void *pvParameters)
 		//if in automode and setpoint was reached, change position
 		if(state(POP,AUTO_MODE_S) && goal > HOLD_ON_GOAL)
 		{
-			//if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
+//			if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
 //			if(counter(POP,TIME_C) > 5)
 //			if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
 //			{
 				goal = 0;
 				counter(RESET,TIME_C);
 				if(parameter(ADD,NEXT_POS_P,1) > NUMBER_OF_POSITIONS)
-					parameter(PUSH,NEXT_POS_P,0);
+					parameter(PUSH,NEXT_POS_P,1);
 				position(GOTO,parameter(POP,NEXT_POS_P));
+				parameter(PUSH,PAN_PWM_P,0);
+				parameter(PUSH,TILT_PWM_P,0);
+				while(counter(POP,TIME_C) < 5)
+				{
+					red_led( TRUE );
+					YIELD(100);
+				}
+				red_led( FALSE );
+
 //			}
 		}
 
@@ -75,7 +84,7 @@ void control_task(void *pvParameters)
 		if(error[TILT] < TRESHOLD && error[TILT] > -TRESHOLD)
 			integral[TILT] = 0;
 		else
-			integral[TILT] += (error[TILT]);// * delta_time);
+			integral[TILT] += 5*(error[TILT]);// * delta_time);
 
 		//check for integral saturation
 		if(integral[PAN] > INTEGRAL_MAX)
@@ -120,8 +129,8 @@ void control_task(void *pvParameters)
 		//update parameters
 		parameter(PUSH,PAN_PWM_P,(INT32S)-input[PAN]);
 		parameter(PUSH,TILT_PWM_P,(INT32S)input[TILT]);
-		parameter(PUSH,PAN_CURRENT_P,(INT32S)/*feedback*/integral[PAN]);
-		parameter(PUSH,TILT_CURRENT_P,(INT32S)/*feedback*/integral[TILT]);
+		parameter(PUSH,PAN_CURRENT_P,(INT32S)feedback[PAN]);
+		parameter(PUSH,TILT_CURRENT_P,(INT32S)feedback[TILT]);
 		parameter(PUSH,PAN_ERROR_P,(INT32S)error[PAN]);
 		parameter(PUSH,TILT_ERROR_P,(INT32S)error[TILT]);
 

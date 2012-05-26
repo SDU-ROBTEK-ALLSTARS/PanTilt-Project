@@ -23,28 +23,29 @@
 #include "os.h"
 #include "itc/itc.h"
 #include "maindefs.h"
+#include "leds/leds.h"
 
 /*****************************   Constants   *******************************/
 //optimized with respect to time
-//#define 	PAN_P_TERM 				22
-//#define 	TILT_P_TERM 			22
-//#define 	I_TERM 					0.15
-//#define 	D_TERM 					0.15
-//#define 	INTEGRAL_MAX			18000
+#define 	PAN_P_TERM 				25
+#define 	TILT_P_TERM 			25
+#define 	I_TERM 					0.15
+#define 	D_TERM 					0.15
+#define 	INTEGRAL_MAX			20000
 
 //optimized with respect to precision
-#define 	PAN_P_TERM 				6
-#define 	TILT_P_TERM 			6
-#define 	I_TERM 					0.05
-#define 	D_TERM 					0.05
-#define 	INTEGRAL_MAX			10000
+//#define 	PAN_P_TERM 				25
+//#define 	TILT_P_TERM 			6
+//#define 	I_TERM 					0.15
+//#define 	D_TERM 					0.05
+//#define 	INTEGRAL_MAX			10000
 
 #define		TASK_FREQUENCY			FREQUENCY(100) //frequency in Hz
 #define		TASK_PERIOD				1/TASK_FREQUENCY
 #define		FREQUENCY(x)			(configTICK_RATE_HZ/x)
-#define		PWM_MIN					5000
+#define		PWM_MIN					6000
 #define		PWM_MAX					30000
-#define 	GOAL					5
+#define 	GOAL					2
 #define		TRESHOLD				1
 #define		BIAS					4500
 #define 	HOLD_ON_GOAL			10
