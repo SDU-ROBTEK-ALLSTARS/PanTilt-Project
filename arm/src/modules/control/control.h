@@ -27,10 +27,10 @@
 
 /*****************************   Constants   *******************************/
 //optimized with respect to time
-#define 	PAN_P_TERM 				25
-#define 	TILT_P_TERM 			25
-#define 	I_TERM 					0.15
-#define 	D_TERM 					0.15
+#define 	PAN_P_TERM 				30
+#define 	TILT_P_TERM 			30
+#define 	I_TERM 					2
+#define 	D_TERM 					1
 #define 	INTEGRAL_MAX			20000
 
 //optimized with respect to precision
@@ -46,9 +46,9 @@
 #define		PWM_MIN					6000
 #define		PWM_MAX					30000
 #define 	GOAL					2
-#define		TRESHOLD				1
-#define		BIAS					4500
-#define 	HOLD_ON_GOAL			10
+#define		TRESHOLD				2
+#define		BIAS					6000
+#define 	HOLD_ON_GOAL			5
 
 #define 	TICKS_PR_REVOLUTION		12*30*3 		//ticks pr motor revolution * gear ratio * belt ratio
 #define		TICK_TO_DEGREE_FACTOR	3.34f
