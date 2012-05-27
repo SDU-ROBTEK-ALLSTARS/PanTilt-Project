@@ -46,19 +46,30 @@ void control_task(void *pvParameters)
 		//check if goal was reached
 		if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
 			goal++;
+//		else
+//			goal = 0;
 
 		//if in automode and setpoint was reached, change position
 		if(state(POP,AUTO_MODE_S) && goal > HOLD_ON_GOAL)
 		{
-			//if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
+//			if(setpoint[0] == feedback[0] && setpoint[1] == feedback[1])
 //			if(counter(POP,TIME_C) > 5)
 //			if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
 //			{
 				goal = 0;
 				counter(RESET,TIME_C);
 				if(parameter(ADD,NEXT_POS_P,1) > NUMBER_OF_POSITIONS)
-					parameter(PUSH,NEXT_POS_P,0);
+					parameter(PUSH,NEXT_POS_P,1);
 				position(GOTO,parameter(POP,NEXT_POS_P));
+				parameter(PUSH,PAN_PWM_P,0);
+				parameter(PUSH,TILT_PWM_P,0);
+				while(counter(POP,TIME_C) < 5)
+				{
+					red_led( TRUE );
+					YIELD(100);
+				}
+				red_led( FALSE );
+
 //			}
 		}
 
@@ -88,8 +99,8 @@ void control_task(void *pvParameters)
 			integral[TILT] = -INTEGRAL_MAX;
 
 		//calculate inputs
-		input[PAN] 		= (error[PAN] * PAN_P_TERM)  + (integral[PAN] * I_TERM) + (derivative[PAN] * D_TERM);
-		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * I_TERM) + (derivative[TILT] * D_TERM);
+		input[PAN] 		= (error[PAN] * PAN_P_TERM)  + (integral[PAN] * PAN_I_TERM) - (derivative[PAN] * PAN_D_TERM);
+		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * TILT_I_TERM) - (derivative[TILT] * TILT_D_TERM);
 
 		//zero input if inside treshold
 		if(input[PAN] < TRESHOLD && input[PAN] > -TRESHOLD)
@@ -120,8 +131,8 @@ void control_task(void *pvParameters)
 		//update parameters
 		parameter(PUSH,PAN_PWM_P,(INT32S)-input[PAN]);
 		parameter(PUSH,TILT_PWM_P,(INT32S)input[TILT]);
-		parameter(PUSH,PAN_CURRENT_P,(INT32S)/*feedback*/integral[PAN]);
-		parameter(PUSH,TILT_CURRENT_P,(INT32S)/*feedback*/integral[TILT]);
+		parameter(PUSH,PAN_CURRENT_P,(INT32S)feedback[PAN]);
+		parameter(PUSH,TILT_CURRENT_P,(INT32S)feedback[TILT]);
 		parameter(PUSH,PAN_ERROR_P,(INT32S)error[PAN]);
 		parameter(PUSH,TILT_ERROR_P,(INT32S)error[TILT]);
 
