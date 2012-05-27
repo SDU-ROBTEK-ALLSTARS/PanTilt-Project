@@ -46,8 +46,8 @@ void control_task(void *pvParameters)
 		//check if goal was reached
 		if(error[PAN] < GOAL && error[PAN] > -GOAL && error[TILT] < GOAL && error[TILT] > -GOAL)
 			goal++;
-		else
-			goal = 0;
+//		else
+//			goal = 0;
 
 		//if in automode and setpoint was reached, change position
 		if(state(POP,AUTO_MODE_S) && goal > HOLD_ON_GOAL)
@@ -99,8 +99,8 @@ void control_task(void *pvParameters)
 			integral[TILT] = -INTEGRAL_MAX;
 
 		//calculate inputs
-		input[PAN] 		= (error[PAN] * PAN_P_TERM)  + (integral[PAN] * I_TERM) - (derivative[PAN] * D_TERM);
-		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * I_TERM) - (derivative[TILT] * D_TERM);
+		input[PAN] 		= (error[PAN] * PAN_P_TERM)  + (integral[PAN] * PAN_I_TERM) - (derivative[PAN] * PAN_D_TERM);
+		input[TILT] 	= (error[TILT] * TILT_P_TERM) + (integral[TILT] * TILT_I_TERM) - (derivative[TILT] * TILT_D_TERM);
 
 		//zero input if inside treshold
 		if(input[PAN] < TRESHOLD && input[PAN] > -TRESHOLD)
