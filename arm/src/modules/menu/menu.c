@@ -76,13 +76,26 @@ void menu_task(void *pvParameters)
 						menu->field[i].size,
 						NUMBER_OF_DECIMALS,
 						parameter(POP,menu->field[i].parameter));
-			if(menu->field[i].blink)
-				display_buffer_set_blink(
-						menu->field[i].begin.x,
-						menu->field[i].begin.y,
-						menu->field[i].size);
 		}
 
+		//handle task states
+		if(state(POP,AUTO_WAIT_S))
+		{
+			//check if wait time has lapsed
+			if(counter(POP,TIME_C) > TIME_TO_WAIT_ON_HIT)
+			{
+				//change to next position and resume regulation
+				if(parameter(ADD,NEXT_POS_P,1) > NUMBER_OF_POSITIONS)
+					parameter(PUSH,NEXT_POS_P,1);
+				position(GOTO,parameter(POP,NEXT_POS_P));
+				state(PUSH,AUTO_WAIT_S,FALSE);
+				red_led( FALSE );
+				activate_automode();
+				activate_regulator();
+			}
+			else
+				red_led(  TRUE );
+		}
 		YIELD(YIELD_TIME_MENU_T)
 	}
 }
@@ -126,6 +139,12 @@ menu_t* menu_handler(INT8U handle)
 				(*iterator->function)();
 
 			display_buffer_clear_blink();
+			for(i=0 ; i < NUMBER_OF_FIELDS ; i++)
+				if(menu->field[i].blink)
+					display_buffer_set_blink(
+							menu->field[i].begin.x,
+							menu->field[i].begin.y,
+							menu->field[i].size);
 		}
 	}
 	return iterator;
@@ -201,6 +220,7 @@ INT32S power_of_ten(INT8U operand)
 void enter_freemode(void)
 {
 	deactivate_automode();
+	deactivate_regulator();
 	state(PUSH,FREE_MODE_S,TRUE);
 }
 
@@ -208,25 +228,7 @@ void exit_freemode(void)
 {
 	state(PUSH,FREE_MODE_S,FALSE);
 }
-void activate_regulator(void)
-{
-	vTaskResume( task_handles[CONTROL_T] );
-}
 
-void deactivate_regulator(void)
-{
-	vTaskSuspend( task_handles[CONTROL_T] );
-}
-void activate_automode(void)
-{
-	state(PUSH,AUTO_MODE_S,TRUE);
-	vTaskResume( task_handles[CONTROL_T] );
-}
-
-void deactivate_automode(void)
-{
-	state(PUSH,AUTO_MODE_S,FALSE);
-}
 void activate_ss(void)
 {
 	red_led( FALSE );

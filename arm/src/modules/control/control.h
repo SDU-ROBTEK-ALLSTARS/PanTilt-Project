@@ -27,13 +27,13 @@
 
 /*****************************   Constants   *******************************/
 //optimized with respect to time
-#define 	PAN_P_TERM 				40
-#define 	PAN_I_TERM 				1.5
-#define 	PAN_D_TERM 				0.5
+#define 	PAN_P_TERM 				36.25//40
+#define 	PAN_I_TERM 				0.78//1.5
+#define 	PAN_D_TERM 				78.25//0.5
 
-#define 	TILT_P_TERM 			20
-#define 	TILT_I_TERM 			0.5
-#define 	TILT_D_TERM 			2
+#define 	TILT_P_TERM 			18.5//20
+#define 	TILT_I_TERM 			0.4//0.5
+#define 	TILT_D_TERM 			40.5//2
 
 #define 	INTEGRAL_MAX			20000
 
@@ -50,9 +50,10 @@
 #define		PWM_MIN					6000
 #define		PWM_MAX					30000
 #define 	GOAL					2
-#define		TRESHOLD				2
+#define		TRESHOLD				2				//minimum input
 #define		BIAS					6000
 #define 	HOLD_ON_GOAL			10
+#define 	TIME_TO_WAIT_ON_HIT		5
 
 #define 	TICKS_PR_REVOLUTION		12*30*3 		//ticks pr motor revolution * gear ratio * belt ratio
 #define		TICK_TO_DEGREE_FACTOR	3.34f
@@ -65,6 +66,10 @@ enum
 	PAN,
 	TILT,
 };
+
+/*******************************   Variables   *****************************/
+extern xTaskHandle task_handles[10];
+
 /************************   Function declarations   ************************/
 
 /*****************************************************************************
@@ -74,6 +79,32 @@ enum
 ******************************************************************************/
 void control_task(void *pvParameters);
 
+/*****************************************************************************
+*   Input    :	-
+*   Output   :	-
+*   Function :	Unblocks the control task
+******************************************************************************/
+void activate_regulator(void);
 
+/*****************************************************************************
+*   Input    :	-
+*   Output   :	-
+*   Function :	Blocks the control task
+******************************************************************************/
+void deactivate_regulator(void);
+
+/*****************************************************************************
+*   Input    :	-
+*   Output   :	-
+*   Function :	Starts system in automode
+******************************************************************************/
+void activate_automode(void);
+
+/*****************************************************************************
+*   Input    :	-
+*   Output   :	-
+*   Function :	Ends system in automode
+******************************************************************************/
+void deactivate_automode(void);
 /****************************** End Of Module *******************************/
 #endif
