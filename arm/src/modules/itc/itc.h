@@ -76,6 +76,7 @@ enum state_handles
 	DREH_S,
 	BLINK_S,
 	AUTO_MODE_S,
+	AUTO_WAIT_S,
 	FREE_MODE_S,
 };
 

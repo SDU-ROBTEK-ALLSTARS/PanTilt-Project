@@ -18,11 +18,8 @@
  *			connected via an SPI controller build in FPGA.
  *
  *To-do:	* Implement state-space controller algorithm
- *			* Implement changing between controllers
- *			* Implement free-mode
- *			* Chance all variables to stdint.h
- *			* Turning blink on and of should be done when changing menu
- *			* Timer task must be implemented
+ *			* Timer task must be implemented to handle automode timer
+ *			  instead of using blink task.
  *
  **************************************************************************/
 /***************************** Include files *******************************/
