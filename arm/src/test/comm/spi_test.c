@@ -63,6 +63,8 @@ static struct spi_test_id_t
                                                                                                \
     vTaskDelay((portTickType) (10 * TASK_NUM));                                                \
                                                                                                \
+    spi_register_task(NULL);                                                                   \
+                                                                                               \
     uart_write((INT8U *) spi_test_task[TASK_NUM].name, taskNameLen, portMAX_DELAY);            \
     uart_write((INT8U *) " started\n", 10, portMAX_DELAY);                                     \
                                                                                                \

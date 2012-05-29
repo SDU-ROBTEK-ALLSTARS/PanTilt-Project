@@ -12,6 +12,7 @@
 * 120407  LBL   Module created
 * 120420  LBL   Added function pointers
 * 120421  LBL   Removed menu_handler
+* 120528  LBL	Added function descriptions
 *
 *****************************************************************************/
 
@@ -165,7 +166,6 @@ typedef struct menu_struct
 	field_t field[NUMBER_OF_FIELDS];	//fields to show
 } menu_t;
 
-extern xTaskHandle task_handles[10];
 /**********************   Function declarations   **************************/
 
 /**************************** INIT MENUS ************************************
@@ -237,16 +237,39 @@ void number_to_string(char *array, INT32S number);
 *****************************************************************************/
 INT32S power_of_ten(INT8U operand);
 
+/**************************** ENTER FREEMODE ********************************
+*   Input    : 	-
+*   Output   : 	-
+*   Function :  Activates freemode
+*****************************************************************************/
 void enter_freemode(void);
+
+/***************************** EXIT FREEMODE ********************************
+*   Input    : 	-
+*   Output   : 	-
+*   Function :  Deactivates freemode
+*****************************************************************************/
 void exit_freemode(void);
-void begin_step(void);
-void end_step(void);
-void activate_regulator(void);
-void deactivate_regulator(void);
-void activate_automode(void);
-void deactivate_automode(void);
+
+/***************************** ACTIVATE PID *********************************
+*   Input    : 	-
+*   Output   : 	-
+*   Function :  Activates PID regulator and deactivates state space regulator
+*****************************************************************************/
 void activate_pid(void);
+
+/***************************** ACTIVATE SS *********************************
+*   Input    : 	-
+*   Output   : 	-
+*   Function :  Activates state space regulator and deactivates PID regulator
+*****************************************************************************/
 void activate_ss(void);
+
+/***************************** ACTIVATE SS *********************************
+*   Input    : 	-
+*   Output   : 	-
+*   Function :  Saves current position
+*****************************************************************************/
 void save_position(void);
-void get_position(void);
+
 #endif /* MENU_H_ */

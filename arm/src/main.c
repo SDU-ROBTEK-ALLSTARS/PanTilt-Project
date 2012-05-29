@@ -18,11 +18,13 @@
  *			connected via an SPI controller build in FPGA.
  *
  *To-do:	* Implement state-space controller algorithm
- *			* Implement changing between controlles
- *			* Implement free-mode
+ *			* Timer task must be implemented to handle automode timer
+ *			  instead of using blink task.
  *
  **************************************************************************/
 /***************************** Include files *******************************/
+/* General includes */
+#include "stdint.h"
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"

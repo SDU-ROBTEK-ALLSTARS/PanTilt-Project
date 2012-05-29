@@ -17,22 +17,22 @@ SECTIONS
     . = ALIGN(8);
   } > FLASH
 
-	.ARM.extab : ALIGN(8)
-	{
-		*(.ARM.extab* .gnu.linkonce.armextab.*)
-	} > FLASH
+  .ARM.extab : ALIGN(8)
+  {
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } > FLASH
 
-	__exidx_start = .;
+  __exidx_start = .;
 
-	.ARM.exidx : ALIGN(8)
-	{
-		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
-	} > FLASH
+  .ARM.exidx : ALIGN(8)
+  {
+    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+  } > FLASH
 
-	__exidx_end = .;
+  __exidx_end = .;
 
   . = ALIGN(8);
-	_etext = .;
+  _etext = .;
 
   .data : ALIGN(8)
   {
@@ -53,8 +53,7 @@ SECTIONS
     _end = .;
   } > SRAM
 
-  /* These are for _sbrk(). We'll give it whatever memory is
-   * left as heap to play with. */
   PROVIDE(_HEAP_START = _end);
-  PROVIDE(_HEAP_END = ALIGN(ORIGIN(SRAM) + LENGTH(SRAM), 8));
+  PROVIDE(_HEAP_END = ALIGN(ORIGIN(SRAM) + LENGTH(SRAM) - 256, 8));
+  PROVIDE(_STACK_TOP = ORIGIN(SRAM) + LENGTH(SRAM));
 }
