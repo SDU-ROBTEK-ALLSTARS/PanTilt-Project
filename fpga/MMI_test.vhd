@@ -48,12 +48,14 @@ COMPONENT testmem
     dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
     clkb : IN STD_LOGIC;
+    enb : IN STD_LOGIC;
     web : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
     addrb : IN STD_LOGIC_VECTOR(4 DOWNTO 0);
     dinb : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
     doutb : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
   );
 END COMPONENT;
+
     COMPONENT Motor_memory_interface
     PORT(
          JA : OUT  std_logic_vector(7 downto 0);
@@ -89,13 +91,14 @@ END COMPONENT;
    -- Clock period definitions
    constant Clk_period : time := 10 ns;
    constant mem_clk_period : time := 10 ns;
- 
+
+   constant input_period : time := 1000 ns;
 BEGIN
  mem_inst : testmem
   PORT MAP (
     clka => '0',
     ena => '0',
-    wea => '0',
+    wea => (others => '0'),
     addra => (others =>'0'),
     dina => (others =>'0'),
     douta => open,
@@ -103,7 +106,8 @@ BEGIN
     web => we,
     addrb => addr,
     dinb => din,
-    doutb => dout
+    doutb => dout,
+	 enb => '1'
   );
 	-- Instantiate the Unit Under Test (UUT)
    uut: Motor_memory_interface PORT MAP (
@@ -149,6 +153,32 @@ BEGIN
       -- insert stimulus here 
 
       wait;
-   end process;
-
+   end process;	
+	
+	input_process: process
+	begin
+		JC(2) <= '0';
+		JC(5) <= '0';
+		wait for input_period;
+		JC(1) <= '0';
+		JC(6) <= '0';
+		wait for input_period;
+		JC(2) <= '1';
+		JC(5) <= '1';
+		wait for input_period;
+		JC(1) <= '1';
+		JC(6) <= '1';
+		wait for input_period;
+	end process;
+	
+	input_process_2:process
+	begin
+		JC(0) <= '0';
+		JC(4) <= '0';
+		wait for input_period *1000;
+		JC(0) <= '1';
+		JC(4) <= '1';
+		wait for input_period * 1000;
+	end process;
+	
 END;
